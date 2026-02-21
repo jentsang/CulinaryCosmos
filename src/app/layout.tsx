@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "FlavorNetwork",
-  description: "FlavorNetwork with Cursor Composer 1.5 integration",
+  description: "FlavorNetwork - network visualization for flavour pairings",
 };
 
 export default function RootLayout({
@@ -19,8 +19,8 @@ export default function RootLayout({
             <a href="/" className="font-semibold text-primary hover:underline">
               FlavorNetwork
             </a>
-            <a href="/composer" className="text-gray-600 hover:text-primary hover:underline">
-              Composer 1.5
+            <a href="/graph" className="text-gray-600 hover:text-primary hover:underline">
+              Graph
             </a>
           </nav>
         </header>
