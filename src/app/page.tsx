@@ -388,7 +388,7 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
-      <div className='absolute top-4 right-4 z-10 w-56'>
+      <div className='absolute top-4 right-4 z-20 w-56'>
         <label className='block text-xs font-medium text-gray-600 mb-1.5'>
           Affinity (min connections)
         </label>
@@ -465,9 +465,9 @@ export default function HomePage() {
           )}
         </div>
         {selectedNode && (
-          <aside className='w-72 border-l border-gray-200 bg-white p-4 overflow-y-auto shrink-0 flex flex-col'>
-            <div className='flex items-center justify-between mb-4'>
-              <h2 className='font-bold text-lg'>{selectedNode.name}</h2>
+          <aside className='w-52 max-h-[50vh] self-center border-l border-gray-200 bg-white px-3 py-4 overflow-y-auto shrink-0 flex flex-col rounded-lg shadow-lg mx-2 my-2'>
+            <div className='flex items-center justify-between mb-3'>
+              <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
               <button
                 onClick={() => setSelectedNode(null)}
                 className='text-sm text-gray-500 hover:text-gray-700'
@@ -475,8 +475,8 @@ export default function HomePage() {
                 ✕
               </button>
             </div>
-            <p className='text-sm text-gray-600 mb-2'>Pairs well with:</p>
-            <ul className='space-y-2'>
+            <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
+            <ul className='space-y-1.5'>
               {pairings.length > 0 ? (
                 pairings.map((p) => (
                   <li key={p.id}>
@@ -487,14 +487,14 @@ export default function HomePage() {
                         );
                         if (node) setSelectedNode(node);
                       }}
-                      className='text-primary font-medium hover:underline text-left'
+                      className='text-primary font-medium hover:underline text-left text-sm'
                     >
                       {p.name}
                     </button>
                   </li>
                 ))
               ) : (
-                <li className='text-gray-500 text-sm'>
+                <li className='text-gray-500 text-xs'>
                   No pairings in dataset
                 </li>
               )}
