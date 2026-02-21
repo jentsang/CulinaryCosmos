@@ -41,6 +41,9 @@ export default function HomePage() {
   } | null>(null);
   const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  const [sidebarLeftCollapsed, setSidebarLeftCollapsed] = useState(false);
+  const [sidebarRightCollapsed, setSidebarRightCollapsed] = useState(false);
 
   useEffect(() => {
     fetch("/api/graph-data")
@@ -73,8 +76,28 @@ export default function HomePage() {
 
   const graphDataFiltered = useMemo(() => {
     if (!graphData) return { nodes: [], links: [] };
-    return { nodes: graphData.nodes, links: graphData.links };
-  }, [graphData]);
+    if (hiddenCategories.size === 0) {
+      return { nodes: graphData.nodes, links: graphData.links };
+    }
+    const visibleIds = new Set(
+      graphData.nodes
+        .filter((n) => !hiddenCategories.has(n.category ?? "other"))
+        .map((n) => n.id),
+    );
+    const nodes = graphData.nodes.filter((n) => visibleIds.has(n.id));
+    const links = graphData.links.filter((link) => {
+      const src =
+        typeof link.source === "string"
+          ? link.source
+          : (link.source as { id?: string })?.id ?? "";
+      const tgt =
+        typeof link.target === "string"
+          ? link.target
+          : (link.target as { id?: string })?.id ?? "";
+      return visibleIds.has(src) && visibleIds.has(tgt);
+    });
+    return { nodes, links };
+  }, [graphData, hiddenCategories]);
 
   const { nodeDegrees: nodeDegreesFiltered, maxDegree: maxDegreeFiltered } =
     useMemo(() => {
@@ -94,6 +117,15 @@ export default function HomePage() {
       const max = Math.max(1, ...degrees.values());
       return { nodeDegrees: degrees, maxDegree: max };
     }, [graphDataFiltered]);
+
+  useEffect(() => {
+    if (!selectedNode || !graphDataFiltered.nodes.length) return;
+    const stillVisible = graphDataFiltered.nodes.some((n) => n.id === selectedNode.id);
+    if (!stillVisible) {
+      setSelectedNode(null);
+      setHighlightedPairing(null);
+    }
+  }, [graphDataFiltered.nodes, selectedNode]);
 
   const pairingsWithLevel = useMemo(() => {
     if (!selectedNode || !graphDataFiltered.nodes.length) return [];
@@ -441,21 +473,79 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
-      <div className='absolute top-4 right-4 z-20'>
-        <label className='flex items-center gap-2 cursor-pointer'>
-          <input
-            type='checkbox'
-            checked={showHolyGrailPanel}
-            onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
-            className='rounded border-gray-300'
-          />
-          <span className='text-xs font-medium text-gray-600'>
-            Show Holy Grail pairings
+      <aside
+        className={`absolute left-0 top-0 bottom-0 z-10 flex flex-col border-r border-gray-200 bg-white/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
+          sidebarLeftCollapsed ? "w-10" : "w-52"
+        }`}
+      >
+        <button
+          type='button'
+          onClick={() => setSidebarLeftCollapsed((c) => !c)}
+          className='absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-r-lg border border-l-0 border-gray-200 bg-white/95 shadow-sm hover:bg-gray-50 z-20'
+          aria-label={sidebarLeftCollapsed ? "Expand categories" : "Collapse categories"}
+        >
+          <span className='text-gray-500 text-xs'>
+            {sidebarLeftCollapsed ? "▶" : "◀"}
           </span>
-        </label>
-      </div>
+        </button>
+        {!sidebarLeftCollapsed && (
+          <div className='flex-1 flex flex-col min-h-0 overflow-hidden py-4'>
+            <p className='text-xs font-semibold text-gray-600 px-3 py-2'>
+              Categories
+            </p>
+            <div className='flex gap-1 px-2 py-1.5 border-y border-gray-100'>
+              <button
+                type='button'
+                onClick={() => setHiddenCategories(new Set())}
+                className='flex-1 text-xs text-primary font-medium hover:underline'
+              >
+                Select all
+              </button>
+              <span className='text-gray-300'>|</span>
+              <button
+                type='button'
+                onClick={() => setHiddenCategories(new Set(Object.keys(CATEGORY_LABELS)))}
+                className='flex-1 text-xs text-primary font-medium hover:underline'
+              >
+                Deselect all
+              </button>
+            </div>
+            <div className='flex-1 min-h-0 overflow-y-auto py-1'>
+              {Object.entries(CATEGORY_LABELS).map(([id, label]) => {
+                const isHidden = hiddenCategories.has(id);
+                return (
+                  <label
+                    key={id}
+                    className='flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer'
+                  >
+                    <input
+                      type='checkbox'
+                      checked={!isHidden}
+                      onChange={() => {
+                        setHiddenCategories((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(id)) next.delete(id);
+                          else next.add(id);
+                          return next;
+                        });
+                      }}
+                      className='rounded border-gray-300'
+                    />
+                    <span
+                      className='w-3 h-3 rounded-full shrink-0'
+                      style={{ backgroundColor: hashToColor(id) }}
+                      aria-hidden
+                    />
+                    <span className='text-xs text-gray-700 truncate'>{label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </aside>
       {selectedNode?.image && (
-        <aside className='absolute left-4 top-1/2 -translate-y-1/2 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl z-10 overflow-hidden'>
+        <aside className='absolute left-56 top-20 z-10 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl overflow-hidden'>
           <div className='aspect-square w-full bg-gray-100'>
             <img
               src={selectedNode.image}
@@ -468,7 +558,8 @@ export default function HomePage() {
           </p>
         </aside>
       )}
-      <SearchBar
+      <div className='absolute left-56 top-4 z-20'>
+        <SearchBar
         query={search.query}
         onQueryChange={search.setQuery}
         focused={search.focused}
@@ -499,7 +590,8 @@ export default function HomePage() {
         promptError={search.promptError}
         useCursor={search.useCursor}
         onUseCursorChange={search.setUseCursor}
-      />
+        />
+      </div>
       <div className='flex flex-1 min-h-0 relative'>
         <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-gray-50 relative w-full h-full'>
           {dimensions.width > 0 && dimensions.height > 0 && (
@@ -525,116 +617,153 @@ export default function HomePage() {
           />
           )}
         </div>
-        {highlightedPairing ? (
-          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
-            <div className='flex items-center justify-between mb-3'>
-              <h2 className='font-bold text-sm pr-2'>
-                {highlightedPairing.source.name} + {highlightedPairing.target.name}
-              </h2>
-              <button
-                onClick={clearHighlight}
-                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
-              >
-                ✕
-              </button>
-            </div>
-            <p className='text-xs text-gray-600'>
-              Suggested pairing from your search
-            </p>
-          </aside>
-        ) : selectedNode ? (
-          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
-            <div className='flex items-center justify-between mb-3'>
-              <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
-              <button
-                onClick={() => setSelectedNode(null)}
-                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
-              >
-                ✕
-              </button>
-            </div>
-            <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
-            {pairingsByCategory.length > 0 ? (
-              <div className='space-y-1'>
-                {pairingsByCategory.map(({ category, label, items }) => {
-                  const isExpanded = expandedCategories.has(category);
-                  return (
-                    <div key={category} className='border-b border-gray-100 last:border-0'>
+        <aside
+          className={`absolute right-0 top-0 bottom-0 z-10 flex flex-col border-l border-gray-200 bg-white/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
+            sidebarRightCollapsed ? "w-10" : "w-56"
+          }`}
+        >
+          <button
+            type='button'
+            onClick={() => setSidebarRightCollapsed((c) => !c)}
+            className='absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-l-lg border border-r-0 border-gray-200 bg-white/95 shadow-sm hover:bg-gray-50 z-20'
+            aria-label={sidebarRightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <span className='text-gray-500 text-xs'>
+              {sidebarRightCollapsed ? "◀" : "▶"}
+            </span>
+          </button>
+          {!sidebarRightCollapsed && (
+            <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+              <div className='flex-1 min-h-0 overflow-y-auto px-3 py-4'>
+                {highlightedPairing ? (
+                  <>
+                    <div className='flex items-center justify-between mb-3'>
+                      <h2 className='font-bold text-sm pr-2'>
+                        {highlightedPairing.source.name} + {highlightedPairing.target.name}
+                      </h2>
                       <button
-                        type='button'
-                        onClick={() => {
-                          setExpandedCategories((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(category)) next.delete(category);
-                            else next.add(category);
-                            return next;
-                          });
-                        }}
-                        className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
+                        onClick={clearHighlight}
+                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
                       >
-                        <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
-                          {label}
-                        </span>
-                        <span className='text-gray-400 text-xs'>
-                          {isExpanded ? "▼" : "▶"} {items.length}
-                        </span>
+                        ✕
                       </button>
-                      {isExpanded && (
-                        <ul className='space-y-1 pb-2 pl-1'>
-                          {items.map(({ node, level }) => (
-                            <li key={node.id}>
-                              <button
-                                onClick={() => {
-                                  const n = graphDataFiltered.nodes.find(
-                                    (x) => x.id === node.id,
-                                  );
-                                  if (n) setSelectedNode(n);
-                                }}
-                                className='text-primary font-medium hover:underline text-left text-sm'
-                              >
-                                {node.name}
-                                {level >= 3 && (
-                                  <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
-                                    {level === 4 ? '★★' : '★'}
-                                  </span>
-                                )}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                     </div>
-                  );
-                })}
+                    <p className='text-xs text-gray-600'>
+                      Suggested pairing from your search
+                    </p>
+                  </>
+                ) : selectedNode ? (
+                  <>
+                    <div className='flex items-center justify-between mb-3'>
+                      <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
+                      <button
+                        onClick={() => setSelectedNode(null)}
+                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
+                    {pairingsByCategory.length > 0 ? (
+                      <div className='space-y-1'>
+                        {pairingsByCategory.map(({ category, label, items }) => {
+                          const isExpanded = expandedCategories.has(category);
+                          return (
+                            <div key={category} className='border-b border-gray-100 last:border-0'>
+                              <button
+                                type='button'
+                                onClick={() => {
+                                  setExpandedCategories((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(category)) next.delete(category);
+                                    else next.add(category);
+                                    return next;
+                                  });
+                                }}
+                                className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
+                              >
+                                <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
+                                  {label}
+                                </span>
+                                <span className='text-gray-400 text-xs'>
+                                  {isExpanded ? "▼" : "▶"} {items.length}
+                                </span>
+                              </button>
+                              {isExpanded && (
+                                <ul className='space-y-1 pb-2 pl-1'>
+                                  {items.map(({ node, level }) => (
+                                    <li key={node.id}>
+                                      <button
+                                        onClick={() => {
+                                          const n = graphDataFiltered.nodes.find(
+                                            (x) => x.id === node.id,
+                                          );
+                                          if (n) setSelectedNode(n);
+                                        }}
+                                        className='text-primary font-medium hover:underline text-left text-sm'
+                                      >
+                                        {node.name}
+                                        {level >= 3 && (
+                                          <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
+                                            {level === 4 ? '★★' : '★'}
+                                          </span>
+                                        )}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className='text-gray-500 text-xs'>No pairings in dataset</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <label className='flex items-center gap-2 cursor-pointer mb-3'>
+                      <input
+                        type='checkbox'
+                        checked={showHolyGrailPanel}
+                        onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
+                        className='rounded border-gray-300'
+                      />
+                      <span className='text-xs font-medium text-gray-600'>
+                        Holy Grail pairings
+                      </span>
+                    </label>
+                    {showHolyGrailPanel && (
+                      <>
+                        <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
+                        <p className='text-xs text-gray-500 mb-3'>
+                          Most highly recommended from The Flavor Bible
+                        </p>
+                        {holyGrailPairings.length > 0 ? (
+                          <ul className='space-y-1.5'>
+                            {holyGrailPairings.map(({ source, target }) => (
+                              <li key={`${source.id}-${target.id}`}>
+                                <button
+                                  onClick={() => setSelectedNode(source)}
+                                  className='text-primary font-medium hover:underline text-left text-sm block w-full'
+                                >
+                                  {source.name} — {target.name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className='text-gray-500 text-xs'>No holy grail pairings</p>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
               </div>
-            ) : (
-              <p className='text-gray-500 text-xs'>No pairings in dataset</p>
-            )}
-          </aside>
-        ) : showHolyGrailPanel ? (
-          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-56 max-h-[60vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
-            <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
-            <p className='text-xs text-gray-500 mb-3'>
-              Most highly recommended pairings from The Flavor Bible
-            </p>
-            {holyGrailPairings.length > 0 ? (
-              <ul className='space-y-1.5'>
-                {holyGrailPairings.map(({ source, target }) => (
-                  <li key={`${source.id}-${target.id}`}>
-                    <button
-                      onClick={() => setSelectedNode(source)}
-                      className='text-primary font-medium hover:underline text-left text-sm block w-full'
-                    >
-                      {source.name} — {target.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className='text-gray-500 text-xs'>No holy grail pairings in dataset</p>
-            )}
-          </aside>
-        ) : null}
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
