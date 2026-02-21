@@ -6,6 +6,7 @@ export interface GraphNode {
   id: string;
   name: string;
   group?: number;
+  category?: string;
 }
 
 export interface GraphLink {
