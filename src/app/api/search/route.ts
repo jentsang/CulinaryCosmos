@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         node: result.node ?? null,
         queryIngredient: result.queryIngredient ?? undefined,
+        nodes: result.nodes ?? undefined,
         prompt: result.node ? undefined : userQuery,
       });
     }

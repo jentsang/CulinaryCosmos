@@ -9,6 +9,7 @@ import type { GraphLink } from "@/types/graph";
 export type SearchResult =
   | { type: "node"; node: GraphNode }
   | { type: "pairing"; source: GraphNode; target: GraphNode }
+  | { type: "nodes"; nodes: GraphNode[] }
   | { type: "prompt"; prompt: string };
 
 /**
@@ -180,6 +181,7 @@ async function searchPrompt(
   const data = (await res.json()) as {
     node?: GraphNode;
     queryIngredient?: GraphNode;
+    nodes?: GraphNode[];
     error?: string;
   };
 
@@ -192,6 +194,9 @@ async function searchPrompt(
     throw new Error(message);
   }
 
+  if (data.nodes && data.nodes.length >= 1) {
+    return { type: "nodes", nodes: data.nodes };
+  }
   if (data.node) {
     if (data.queryIngredient && data.queryIngredient.id !== data.node.id) {
       return {

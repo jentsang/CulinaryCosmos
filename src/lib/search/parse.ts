@@ -40,6 +40,8 @@ export function extractNodeFromText(text: string): GraphNode | null {
 export type SearchResult = {
   node: GraphNode | null;
   queryIngredient?: GraphNode;
+  /** When set, contains 1-5 matched nodes for multi-node highlighting. */
+  nodes?: GraphNode[];
   error?: string;
   rateLimited?: boolean;
 };

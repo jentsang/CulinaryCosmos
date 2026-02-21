@@ -35,10 +35,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [highlightedPairing, setHighlightedPairing] = useState<{
-    source: GraphNode;
-    target: GraphNode;
-  } | null>(null);
+  const [highlightedNodes, setHighlightedNodes] = useState<GraphNode[]>([]);
   const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
@@ -67,12 +64,17 @@ export default function HomePage() {
 
   useEffect(() => {
     setExpandedCategories(new Set());
-  }, [selectedNode?.id, highlightedPairing]);
+  }, [selectedNode?.id, highlightedNodes]);
 
   const clearHighlight = useCallback(() => {
     setSelectedNode(null);
-    setHighlightedPairing(null);
+    setHighlightedNodes([]);
   }, []);
+
+  const highlightedNodeIds = useMemo(
+    () => new Set(highlightedNodes.map((n) => n.id)),
+    [highlightedNodes],
+  );
 
   const graphDataFiltered = useMemo(() => {
     if (!graphData) return { nodes: [], links: [] };
@@ -123,7 +125,7 @@ export default function HomePage() {
     const stillVisible = graphDataFiltered.nodes.some((n) => n.id === selectedNode.id);
     if (!stillVisible) {
       setSelectedNode(null);
-      setHighlightedPairing(null);
+      setHighlightedNodes([]);
     }
   }, [graphDataFiltered.nodes, selectedNode]);
 
@@ -225,7 +227,7 @@ export default function HomePage() {
         (n) => n.id === String(node.id) || n.name === node.name,
       );
       if (graphNode) {
-        setHighlightedPairing(null);
+        setHighlightedNodes([]);
         setSelectedNode(graphNode);
       }
     },
@@ -235,33 +237,29 @@ export default function HomePage() {
   const nodeColorFn = useCallback(
     (node: unknown) => {
       const n = node as GraphNode;
-      const isHighlightedPairing =
-        highlightedPairing &&
-        (n.id === highlightedPairing.source.id || n.id === highlightedPairing.target.id);
+      const isHighlighted = highlightedNodeIds.has(n.id ?? "");
       const isSelected = selectedNode && n.id === selectedNode.id;
       const isPairing = selectedNode && pairings.some((p) => p.id === n.id);
-      if (isHighlightedPairing) return "#FF3B30";
+      if (isHighlighted) return "#FF3B30";
       if (isSelected) return "#FF3B30";
       if (isPairing) return "#34C759";
       if (n.category) return hashToColor(n.category);
       const g = n.group ?? 0;
       return NODE_COLORS[g % NODE_COLORS.length];
     },
-    [selectedNode, pairings, highlightedPairing],
+    [selectedNode, pairings, highlightedNodeIds],
   );
 
   const nodeValFn = useCallback(
     (node: unknown) => {
       const n = node as GraphNode;
-      const isHighlightedPairing =
-        highlightedPairing &&
-        (n.id === highlightedPairing.source.id || n.id === highlightedPairing.target.id);
+      const isHighlighted = highlightedNodeIds.has(n.id ?? "");
       const isSelected = selectedNode && n.id === selectedNode.id;
-      if (isHighlightedPairing || isSelected) return 20;
+      if (isHighlighted || isSelected) return 20;
       const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
       return 6 + 18 * (degree / maxDegreeFiltered);
     },
-    [selectedNode, highlightedPairing, nodeDegreesFiltered, maxDegreeFiltered],
+    [selectedNode, highlightedNodeIds, nodeDegreesFiltered, maxDegreeFiltered],
   );
 
   const linkVisibilityFn = useCallback(
@@ -276,17 +274,15 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
-      if (highlightedPairing) {
-        const { source, target } = highlightedPairing;
-        const isPairingLink =
-          (src === source.id && tgt === target.id) ||
-          (src === target.id && tgt === source.id);
-        return isPairingLink || isLevel4;
+      if (highlightedNodes.length > 0) {
+        const srcHighlighted = highlightedNodeIds.has(src ?? "");
+        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
+        return (srcHighlighted && tgtHighlighted) || isLevel4;
       }
       if (!selectedNode) return isLevel4;
       return src === selectedNode.id || tgt === selectedNode.id;
     },
-    [selectedNode, highlightedPairing],
+    [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
   const linkColorFn = useCallback(
@@ -303,18 +299,20 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
-      if (highlightedPairing) {
-        const { source, target } = highlightedPairing;
-        const isPairingLink =
-          (src === source.id && tgt === target.id) ||
-          (src === target.id && tgt === source.id);
-        return isPairingLink ? "rgba(255, 59, 48, 0.8)" : isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
+      if (highlightedNodes.length > 0) {
+        const srcHighlighted = highlightedNodeIds.has(src ?? "");
+        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
+        return srcHighlighted && tgtHighlighted
+          ? "rgba(255, 59, 48, 0.8)"
+          : isLevel4
+            ? "rgba(52, 199, 89, 0.5)"
+            : "rgba(0,0,0,0)";
       }
       if (!selectedNode) return isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
       const connected = src === selectedNode.id || tgt === selectedNode.id;
       return connected ? "rgba(52, 199, 89, 0.6)" : "rgba(0,0,0,0)";
     },
-    [selectedNode, highlightedPairing],
+    [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
   const linkWidthFn = useCallback(
@@ -331,17 +329,15 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
-      if (highlightedPairing) {
-        const { source, target } = highlightedPairing;
-        const isPairingLink =
-          (src === source.id && tgt === target.id) ||
-          (src === target.id && tgt === source.id);
-        return isPairingLink ? 3 : isLevel4 ? 1 : 0;
+      if (highlightedNodes.length > 0) {
+        const srcHighlighted = highlightedNodeIds.has(src ?? "");
+        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
+        return srcHighlighted && tgtHighlighted ? 3 : isLevel4 ? 1 : 0;
       }
       if (!selectedNode) return isLevel4 ? 1 : 0;
       return src === selectedNode.id || tgt === selectedNode.id ? 2.5 : 1;
     },
-    [selectedNode, highlightedPairing],
+    [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
   const graphDataStable = useMemo(
@@ -417,26 +413,12 @@ export default function HomePage() {
   useEffect(() => {
     if (!graphRef.current || !graphDataFiltered.nodes.length) return;
     const fg = graphRef.current;
-    if (highlightedPairing) {
-      const srcNode = graphDataFiltered.nodes.find(
-        (n) => n.id === highlightedPairing.source.id,
-      ) as { x?: number; y?: number } | undefined;
-      const tgtNode = graphDataFiltered.nodes.find(
-        (n) => n.id === highlightedPairing.target.id,
-      ) as { x?: number; y?: number } | undefined;
-      if (
-        srcNode &&
-        tgtNode &&
-        typeof srcNode.x === "number" &&
-        typeof srcNode.y === "number" &&
-        typeof tgtNode.x === "number" &&
-        typeof tgtNode.y === "number"
-      ) {
-        const cx = (srcNode.x + tgtNode.x) / 2;
-        const cy = (srcNode.y + tgtNode.y) / 2;
-        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(cx, cy, 400);
-        (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
-      }
+    if (highlightedNodes.length > 0) {
+      (fg as { zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void }).zoomToFit?.(
+        400,
+        50,
+        (node) => highlightedNodeIds.has((node as GraphNode).id ?? ""),
+      );
       return;
     }
     if (!selectedNode) return;
@@ -445,7 +427,7 @@ export default function HomePage() {
     if (typeof n.x !== "number" || typeof n.y !== "number") return;
     (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(n.x, n.y, 400);
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
-  }, [selectedNode, highlightedPairing, graphDataFiltered]);
+  }, [selectedNode, highlightedNodes, graphDataFiltered]);
 
   if (loading) {
     return (
@@ -544,8 +526,39 @@ export default function HomePage() {
           </div>
         )}
       </aside>
-      {selectedNode?.image && (
-        <aside className='absolute left-56 top-20 z-10 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl overflow-hidden'>
+      {highlightedNodes.length > 0 ? (
+        <aside
+          className={`absolute top-20 z-10 w-40 max-h-[70vh] overflow-y-auto border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl flex flex-col gap-2 p-2 transition-[left] duration-200 ${
+            sidebarLeftCollapsed ? "left-14" : "left-56"
+          }`}
+        >
+          {highlightedNodes.map((n) => (
+            <div key={n.id} className='shrink-0'>
+              <div className='aspect-square w-full bg-gray-100 rounded overflow-hidden'>
+                {n.image ? (
+                  <img
+                    src={n.image}
+                    alt={n.name}
+                    className='w-full h-full object-cover'
+                  />
+                ) : (
+                  <div className='w-full h-full flex items-center justify-center text-gray-400 text-2xl'>
+                    —
+                  </div>
+                )}
+              </div>
+              <p className='px-2 py-1 text-xs font-medium text-gray-800 truncate' title={n.name}>
+                {n.name}
+              </p>
+            </div>
+          ))}
+        </aside>
+      ) : selectedNode?.image ? (
+        <aside
+          className={`absolute top-20 z-10 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl overflow-hidden transition-[left] duration-200 ${
+            sidebarLeftCollapsed ? "left-14" : "left-56"
+          }`}
+        >
           <div className='aspect-square w-full bg-gray-100'>
             <img
               src={selectedNode.image}
@@ -557,8 +570,12 @@ export default function HomePage() {
             {selectedNode.name}
           </p>
         </aside>
-      )}
-      <div className='absolute left-56 top-4 z-20'>
+      ) : null}
+      <div
+        className={`absolute top-4 z-20 transition-[left] duration-200 ${
+          sidebarLeftCollapsed ? "left-14" : "left-56"
+        }`}
+      >
         <SearchBar
         query={search.query}
         onQueryChange={search.setQuery}
@@ -566,13 +583,13 @@ export default function HomePage() {
         onFocusChange={search.setFocused}
         results={search.fuzzyResults}
         onSelectNode={(node) => {
-          setHighlightedPairing(null);
+          setHighlightedNodes([]);
           setSelectedNode(node);
         }}
         onSubmit={() =>
           search.submitSearch(
             (node) => {
-              setHighlightedPairing(null);
+              setHighlightedNodes([]);
               setSelectedNode(node);
             },
             (result) => {
@@ -580,9 +597,13 @@ export default function HomePage() {
                 // TODO: handle LLM result when integrated
               }
             },
+            (nodes) => {
+              setSelectedNode(null);
+              setHighlightedNodes(nodes);
+            },
             (source, target) => {
               setSelectedNode(null);
-              setHighlightedPairing({ source, target });
+              setHighlightedNodes([source, target]);
             },
           )
         }
@@ -617,153 +638,130 @@ export default function HomePage() {
           />
           )}
         </div>
-        <aside
-          className={`absolute right-0 top-0 bottom-0 z-10 flex flex-col border-l border-gray-200 bg-white/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
-            sidebarRightCollapsed ? "w-10" : "w-56"
-          }`}
-        >
-          <button
-            type='button'
-            onClick={() => setSidebarRightCollapsed((c) => !c)}
-            className='absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-l-lg border border-r-0 border-gray-200 bg-white/95 shadow-sm hover:bg-gray-50 z-20'
-            aria-label={sidebarRightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <span className='text-gray-500 text-xs'>
-              {sidebarRightCollapsed ? "◀" : "▶"}
-            </span>
-          </button>
-          {!sidebarRightCollapsed && (
-            <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
-              <div className='flex-1 min-h-0 overflow-y-auto px-3 py-4'>
-                {highlightedPairing ? (
-                  <>
-                    <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm pr-2'>
-                        {highlightedPairing.source.name} + {highlightedPairing.target.name}
-                      </h2>
-                      <button
-                        onClick={clearHighlight}
-                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <p className='text-xs text-gray-600'>
-                      Suggested pairing from your search
-                    </p>
-                  </>
-                ) : selectedNode ? (
-                  <>
-                    <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
-                      <button
-                        onClick={() => setSelectedNode(null)}
-                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
-                    {pairingsByCategory.length > 0 ? (
-                      <div className='space-y-1'>
-                        {pairingsByCategory.map(({ category, label, items }) => {
-                          const isExpanded = expandedCategories.has(category);
-                          return (
-                            <div key={category} className='border-b border-gray-100 last:border-0'>
-                              <button
-                                type='button'
-                                onClick={() => {
-                                  setExpandedCategories((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(category)) next.delete(category);
-                                    else next.add(category);
-                                    return next;
-                                  });
-                                }}
-                                className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
-                              >
-                                <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
-                                  {label}
-                                </span>
-                                <span className='text-gray-400 text-xs'>
-                                  {isExpanded ? "▼" : "▶"} {items.length}
-                                </span>
-                              </button>
-                              {isExpanded && (
-                                <ul className='space-y-1 pb-2 pl-1'>
-                                  {items.map(({ node, level }) => (
-                                    <li key={node.id}>
-                                      <button
-                                        onClick={() => {
-                                          const n = graphDataFiltered.nodes.find(
-                                            (x) => x.id === node.id,
-                                          );
-                                          if (n) setSelectedNode(n);
-                                        }}
-                                        className='text-primary font-medium hover:underline text-left text-sm'
-                                      >
-                                        {node.name}
-                                        {level >= 3 && (
-                                          <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
-                                            {level === 4 ? '★★' : '★'}
-                                          </span>
-                                        )}
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className='text-gray-500 text-xs'>No pairings in dataset</p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <label className='flex items-center gap-2 cursor-pointer mb-3'>
-                      <input
-                        type='checkbox'
-                        checked={showHolyGrailPanel}
-                        onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
-                        className='rounded border-gray-300'
-                      />
-                      <span className='text-xs font-medium text-gray-600'>
-                        Holy Grail pairings
-                      </span>
-                    </label>
-                    {showHolyGrailPanel && (
-                      <>
-                        <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
-                        <p className='text-xs text-gray-500 mb-3'>
-                          Most highly recommended from The Flavor Bible
-                        </p>
-                        {holyGrailPairings.length > 0 ? (
-                          <ul className='space-y-1.5'>
-                            {holyGrailPairings.map(({ source, target }) => (
-                              <li key={`${source.id}-${target.id}`}>
-                                <button
-                                  onClick={() => setSelectedNode(source)}
-                                  className='text-primary font-medium hover:underline text-left text-sm block w-full'
-                                >
-                                  {source.name} — {target.name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className='text-gray-500 text-xs'>No holy grail pairings</p>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
+        {highlightedNodes.length > 0 ? (
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
+            <div className='flex items-center justify-between mb-3'>
+              <h2 className='font-bold text-sm pr-2'>
+                {highlightedNodes.map((n) => n.name).join(" + ")}
+              </h2>
+              <button
+                onClick={clearHighlight}
+                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+              >
+                ✕
+              </button>
             </div>
-          )}
-        </aside>
+            <p className='text-xs text-gray-600 mb-2'>
+              Suggested ingredients from your search
+            </p>
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent(
+                highlightedNodes.map((n) => n.name).join(" ") + " recipes",
+              )}`}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline'
+            >
+              Search popular recipes
+              <span aria-hidden>↗</span>
+            </a>
+          </aside>
+        ) : selectedNode ? (
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
+            <div className='flex items-center justify-between mb-3'>
+              <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
+              <button
+                onClick={() => setSelectedNode(null)}
+                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+              >
+                ✕
+              </button>
+            </div>
+            <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
+            {pairingsByCategory.length > 0 ? (
+              <div className='space-y-1'>
+                {pairingsByCategory.map(({ category, label, items }) => {
+                  const isExpanded = expandedCategories.has(category);
+                  return (
+                    <div key={category} className='border-b border-gray-100 last:border-0'>
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setExpandedCategories((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(category)) next.delete(category);
+                            else next.add(category);
+                            return next;
+                          });
+                        }}
+                        className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
+                      >
+                        <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
+                          {label}
+                        </span>
+                        <span className='text-gray-400 text-xs'>
+                          {isExpanded ? "▼" : "▶"} {items.length}
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <ul className='space-y-1 pb-2 pl-1'>
+                          {items.map(({ node, level }) => (
+                            <li key={node.id}>
+                              <button
+                                onClick={() => {
+                                  const n = graphDataFiltered.nodes.find(
+                                    (x) => x.id === node.id,
+                                  );
+                                  if (n) setSelectedNode(n);
+                                }}
+                                className='text-primary font-medium hover:underline text-left text-sm'
+                              >
+                                {node.name}
+                                {level >= 3 && (
+                                  <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
+                                    {level === 4 ? '★★' : '★'}
+                                  </span>
+                                )}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className='text-gray-500 text-xs'>No pairings in dataset</p>
+            )}
+          </aside>
+        ) : showHolyGrailPanel ? (
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-56 max-h-[60vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
+            <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
+            <p className='text-xs text-gray-500 mb-3'>
+              Most highly recommended pairings from The Flavor Bible
+            </p>
+            {holyGrailPairings.length > 0 ? (
+              <ul className='space-y-1.5'>
+                {holyGrailPairings.map(({ source, target }) => (
+                  <li key={`${source.id}-${target.id}`}>
+                    <button
+                      onClick={() => {
+                        setSelectedNode(null);
+                        setHighlightedNodes([source, target]);
+                      }}
+                      className='text-primary font-medium hover:underline text-left text-sm block w-full'
+                    >
+                      {source.name} — {target.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className='text-gray-500 text-xs'>No holy grail pairings in dataset</p>
+            )}
+          </aside>
+        ) : null}
       </div>
     </div>
   );
