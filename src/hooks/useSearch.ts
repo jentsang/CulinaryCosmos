@@ -25,6 +25,7 @@ export function useSearch(nodes: GraphNode[], links: GraphLink[] = []) {
     async (
       onNodeSelect: (node: GraphNode) => void,
       onPromptResult?: (result: SearchResult) => void,
+      onNodesSelect?: (nodes: GraphNode[]) => void,
       onPairingSelect?: (source: GraphNode, target: GraphNode) => void,
     ) => {
       const trimmed = query.trim();
@@ -42,15 +43,11 @@ export function useSearch(nodes: GraphNode[], links: GraphLink[] = []) {
       setPromptError(null);
       try {
         const result = await search(trimmed, nodes, links, useCursor ? "cursor" : "gemini");
-        console.log("[useSearch] result", {
-          type: result.type,
-          ...(result.type === "pairing"
-            ? { source: result.source?.id, target: result.target?.id }
-            : result.type === "node"
-              ? { nodeId: result.node?.id }
-              : {}),
-        });
-        if (result.type === "pairing" && onPairingSelect) {
+        if (result.type === "nodes" && onNodesSelect) {
+          onNodesSelect(result.nodes);
+          setQuery("");
+          setFocused(false);
+        } else if (result.type === "pairing" && onPairingSelect) {
           onPairingSelect(result.source, result.target);
           setQuery("");
           setFocused(false);

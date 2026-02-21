@@ -16,13 +16,19 @@ const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const LOG = "[Gemini]";
 
+/** Max number of ingredients for Gemini to return (1–5). */
+const MAX_INGREDIENTS = 3;
+
 let holyGrailCache: string[] | null = null;
 
 async function loadHolyGrailPairings(): Promise<string[]> {
   if (holyGrailCache) return holyGrailCache;
   try {
     const dataDir = path.join(process.cwd(), "data");
-    const raw = await readFile(path.join(dataDir, "flavor_pairings.json"), "utf-8");
+    const raw = await readFile(
+      path.join(dataDir, "flavor_pairings.json"),
+      "utf-8",
+    );
     const data = JSON.parse(raw) as {
       edges?: { source: string; target: string; weight?: number }[];
     };
@@ -37,7 +43,10 @@ async function loadHolyGrailPairings(): Promise<string[]> {
   }
 }
 
-function buildOrganicPrompt(userQuery: string, holyGrailPairs: string[]): string {
+function buildOrganicPrompt(
+  userQuery: string,
+  holyGrailPairs: string[],
+): string {
   const holyGrailHint =
     holyGrailPairs.length > 0
       ? `
@@ -47,13 +56,14 @@ ${holyGrailPairs.map((p) => `- ${p}`).join("\n")}
 `
       : "";
 
-  return `The user is searching a flavor pairing network. Respond with ONLY ingredient names, nothing else.
+  return `The user is searching a flavor pairing network. Respond with 1 to ${MAX_INGREDIENTS} ingredient names separated by pipes (|), nothing else.
 
 RULES:
-1. If they ask about pairings (e.g. "what pairs with lemon", "I have apple what goes well"): respond with TWO ingredients separated by a pipe: QUERY_INGREDIENT|SUGGESTED_PAIRING. Example: lemon|tomato
-2. If they name a single ingredient (e.g. "chocolate"): respond with just that ingredient.
+1. If they ask about pairings or combinations (e.g. "what pairs with lemon", "ingredients for caprese"): list the query ingredient first, then the suggested pairing(s). Example: lemon|tomato
+2. If they ask for a dish or combo: list up to ${MAX_INGREDIENTS} ingredients that work together.
+3. If they name a single ingredient: respond with just that ingredient.
 ${holyGrailHint}
-Output format: either "ingredient" or "ingredient1|ingredient2" (no quotes, no explanation).`;
+Output format: "ingredient" or "ingredient1|ingredient2" (max ${MAX_INGREDIENTS}, no quotes, no explanation).`;
 }
 
 function buildPickFromPrompt(
@@ -61,9 +71,7 @@ function buildPickFromPrompt(
   userQuery: string,
   organicResponse: string,
 ): string {
-  const list = candidates
-    .map((n) => `- ${n.id}: ${n.name}`)
-    .join("\n");
+  const list = candidates.map((n) => `- ${n.id}: ${n.name}`).join("\n");
   return `The user asked: "${userQuery}"
 You previously suggested: "${organicResponse}"
 
@@ -88,14 +96,16 @@ async function callGemini(
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature,
-        maxOutputTokens: 128,
+        maxOutputTokens: 256,
       },
     }),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(res.status === 429 ? "Rate limit exceeded" : errText.slice(0, 200));
+    throw new Error(
+      res.status === 429 ? "Rate limit exceeded" : errText.slice(0, 200),
+    );
   }
 
   const data = (await res.json()) as {
@@ -104,9 +114,7 @@ async function callGemini(
     }>;
   };
 
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? ""
-  );
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 }
 
 export async function buildGeminiPrompt(userQuery: string): Promise<string> {
@@ -139,23 +147,34 @@ export async function searchWithGemini(
       return { node: null };
     }
 
-    // 2. Check for pairing format: "queryIngredient|suggestedPairing"
-    const pairingParts = organicResponse.split("|").map((s) => s.trim()).filter(Boolean);
-    if (pairingParts.length >= 2) {
-      const queryPart = pairingParts[0];
-      const suggestedPart = pairingParts[1];
-      const queryNode = matchOrganicToNode(queryPart, nodes);
-      const suggestedNode = matchOrganicToNode(suggestedPart, nodes);
-      if (queryNode && suggestedNode && queryNode.id !== suggestedNode.id) {
-        console.log(LOG, "Pairing format matched:", {
-          queryNode: queryNode.id,
-          suggestedNode: suggestedNode.id,
-        });
-        return { node: suggestedNode, queryIngredient: queryNode };
+    // 2. Parse pipe-separated ingredients (up to MAX_INGREDIENTS)
+    const parts = organicResponse
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, MAX_INGREDIENTS);
+    const matchedNodes: GraphNode[] = [];
+    const seenIds = new Set<string>();
+    for (const part of parts) {
+      const n = matchOrganicToNode(part, nodes);
+      if (n && !seenIds.has(n.id)) {
+        seenIds.add(n.id);
+        matchedNodes.push(n);
       }
     }
+    if (matchedNodes.length >= 1) {
+      console.log(
+        LOG,
+        "Multi-ingredient matched:",
+        matchedNodes.map((n) => n.id),
+      );
+      return {
+        node: matchedNodes[0],
+        nodes: matchedNodes,
+      };
+    }
 
-    // 3. Try to match as single ingredient
+    // 3. Try to match as single ingredient (fallback for non-pipe format)
     const matched = matchOrganicToNode(organicResponse, nodes);
     if (matched) {
       console.log(LOG, "Matched locally:", {
@@ -178,7 +197,12 @@ export async function searchWithGemini(
       return { node: null };
     }
 
-    console.log(LOG, "No local match, re-prompting with", candidates.length, "candidates");
+    console.log(
+      LOG,
+      "No local match, re-prompting with",
+      candidates.length,
+      "candidates",
+    );
     const pickPrompt = buildPickFromPrompt(
       candidates,
       userQuery,
@@ -194,7 +218,8 @@ export async function searchWithGemini(
       .split(/\s+/)[0];
 
     const pickedNode = candidates.find(
-      (n) => n.id.toLowerCase() === pickedId || n.name.toLowerCase() === pickedId,
+      (n) =>
+        n.id.toLowerCase() === pickedId || n.name.toLowerCase() === pickedId,
     );
 
     if (pickedNode) {
@@ -207,7 +232,8 @@ export async function searchWithGemini(
 
     return { node: null };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Gemini request failed";
+    const message =
+      err instanceof Error ? err.message : "Gemini request failed";
     console.error(LOG, "Error:", err);
     return {
       node: null,
