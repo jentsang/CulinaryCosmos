@@ -74,7 +74,13 @@ Each node has a `category` field for graph colouring and UI filtering. Categorie
 # 1. Extract from PDF
 .venv/bin/python scripts/extract_flavor_pairings.py
 
-# 2. Add categories (for colouring & filtering)
+# 2. Clean junk nodes (phrases, cuisines, non-ingredients)
+.venv/bin/python scripts/clean_flavor_data.py
+
+# 3. Normalize & merge similar ingredients (apricots/dried apricots → apricot)
+.venv/bin/python scripts/normalize_and_merge_ingredients.py
+
+# 4. Add categories (for colouring & filtering)
 .venv/bin/python scripts/categorize_ingredients.py
 ```
 

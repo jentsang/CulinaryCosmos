@@ -28,7 +28,9 @@ BLOCKLIST = {
     "adnews", "awakens flavors", "— bob", "twenty-year",
     "visit to spain", "corporate career", "editor and publisher",
     "and then cooked", "all a mushroom needs", "all the flavor stays",
-    "if i ", "most of the time", "the vegetables"
+    "if i ", "most of the time", "the vegetables",
+    "also called for", "also known as", "along with",
+    "restaurant", "cuisine",  # "X cuisine" and "restaurant" - not ingredients
 }
 
 
@@ -66,8 +68,8 @@ def is_valid_ingredient(name: str) -> bool:
         'a contrast', 'a fruit', 'a harvard', 'a latin', 'a friend', 'a delicious'
     ]):
         return False
-    # Reject if starts with article + space (phrase, not ingredient)
-    if re.match(r'^(a|an|the)\s+', name):
+    # Reject if starts with article or conjunction (phrase, not ingredient)
+    if re.match(r'^(a|an|the|and|also|along)\s+', name):
         return False
     # Reject if mostly digits or punctuation
     if re.match(r'^[\W\d]+$', name):

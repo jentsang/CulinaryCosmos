@@ -53,12 +53,7 @@ async function loadFlavorPairingsJson(dataDir: string): Promise<{ nodes: { id: s
 async function loadFlavorPairingsCsv(dataDir: string): Promise<{ nodes: { id: string; name: string; group?: number }[]; links: { source: string; target: string; value?: number }[] } | null> {
   try {
     const raw = await readFile(path.join(dataDir, "flavor_pairings.csv"), "utf-8");
-    const records = parse(raw, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      relax_column_count: true,
-    }) as { source: string; target: string; weight?: string }[];
+    const records = parseCSVSimple(raw);
 
     if (!records.length) return null;
 
@@ -120,16 +115,36 @@ async function loadBackupNodesEdges(dataDir: string): Promise<{ nodes: { id: str
   }
 }
 
-export async function GET() {
+const LITE_NODE_LIMIT = 600;
+
+function toLiteGraph(
+  nodes: { id: string; name: string; group?: number; category?: string }[],
+  links: { source: string; target: string; value?: number }[]
+): { nodes: typeof nodes; links: typeof links } {
+  const degree = new Map<string, number>();
+  for (const l of links) {
+    degree.set(l.source, (degree.get(l.source) ?? 0) + 1);
+    degree.set(l.target, (degree.get(l.target) ?? 0) + 1);
+  }
+  const sorted = [...nodes].sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
+  const topIds = new Set(sorted.slice(0, LITE_NODE_LIMIT).map((n) => n.id));
+  const liteNodes = nodes.filter((n) => topIds.has(n.id));
+  const liteLinks = links.filter((l) => topIds.has(l.source) && topIds.has(l.target));
+  return { nodes: liteNodes, links: liteLinks };
+}
+
+export async function GET(request: Request) {
   const dataDir = path.join(process.cwd(), "data");
+  const { searchParams } = new URL(request.url);
+  const lite = searchParams.get("lite") === "true";
 
   const json = await loadFlavorPairingsJson(dataDir);
   if (json) {
-    return NextResponse.json({
-      nodes: json.nodes,
-      links: json.links,
-      source: "flavor_pairings.json",
-    });
+    const { nodes, links } = lite ? toLiteGraph(json.nodes, json.links) : { nodes: json.nodes, links: json.links };
+    return NextResponse.json(
+      { nodes, links, source: "flavor_pairings.json", lite },
+      { headers: { "Cache-Control": "public, max-age=300, s-maxage=300" } }
+    );
   }
 
   const csv = await loadFlavorPairingsCsv(dataDir);
