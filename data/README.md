@@ -43,11 +43,39 @@ garlic,tomatoes,2
 ...
 ```
 
+## Node Categories
+
+Each node has a `category` field for graph colouring and UI filtering. Categories are in `metadata.categories`:
+
+| ID | Label |
+|----|-------|
+| cuisine | Cuisine & Region |
+| meat_poultry | Meat & Poultry |
+| seafood | Seafood & Fish |
+| dairy_cheese | Dairy & Cheese |
+| vegetables | Vegetables |
+| herbs_spices | Herbs & Spices |
+| fruits | Fruits |
+| legumes | Legumes & Beans |
+| grains_starches | Grains & Starches |
+| nuts_seeds | Nuts & Seeds |
+| oils_vinegars | Oils & Vinegars |
+| sauces_condiments | Sauces & Condiments |
+| beverages | Beverages |
+| sweets_desserts | Sweets & Desserts |
+| techniques_dishes | Techniques & Dish Types |
+| other | Other |
+
+`metadata.category_counts` has the count per category for filter UI.
+
 ## Regenerating the Dataset
 
 ```bash
-# From project root, with venv activated:
+# 1. Extract from PDF
 .venv/bin/python scripts/extract_flavor_pairings.py
+
+# 2. Add categories (for colouring & filtering)
+.venv/bin/python scripts/categorize_ingredients.py
 ```
 
 Requires: `pdfplumber` (see `scripts/requirements.txt`).
