@@ -80,7 +80,10 @@ Each node has a `category` field for graph colouring and UI filtering. Categorie
 # 3. Normalize & merge similar ingredients (apricots/dried apricots → apricot)
 .venv/bin/python scripts/normalize_and_merge_ingredients.py
 
-# 4. Add categories (for colouring & filtering)
+# 4. Remove isolated nodes & non-food items
+.venv/bin/python scripts/filter_non_food_and_isolated.py
+
+# 5. Add categories (for colouring & filtering)
 .venv/bin/python scripts/categorize_ingredients.py
 ```
 
