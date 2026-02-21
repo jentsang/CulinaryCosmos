@@ -31,27 +31,18 @@ export function SearchBar({
 }: SearchBarProps) {
   return (
     <div className='absolute top-4 left-4 z-10 w-72'>
-      <div
-        className='relative ring-1 ring-slate-600'
-        style={{
-          clipPath:
-            "polygon(0% 50%, 12% 4%, 88% 4%, 94% 12%, 100% 50%, 94% 88%, 88% 96%, 12% 96%)",
+      <input
+        type='text'
+        placeholder='Search flavours...'
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        onFocus={() => onFocusChange(true)}
+        onBlur={() => setTimeout(() => onFocusChange(false), 150)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSubmit();
         }}
-      >
-        <input
-          type='text'
-          placeholder='Search flavours...'
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          onFocus={() => onFocusChange(true)}
-          onBlur={() => setTimeout(() => onFocusChange(false), 150)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSubmit();
-          }}
-          className='w-full px-5 py-3 border-0 bg-slate-800/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset text-sm text-gray-100 placeholder-gray-400'
-          style={{ borderRadius: 0 }}
-        />
-      </div>
+        className='w-full px-4 py-2.5 rounded-lg border border-slate-600 bg-slate-800/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-gray-100 placeholder-gray-400'
+      />
       {focused && query.trim() && (
         <div className='absolute top-full left-0 right-0 mt-1 rounded-lg border border-slate-600 bg-slate-800 shadow-lg overflow-hidden max-h-60 overflow-y-auto'>
           {results.length > 0 ? (
