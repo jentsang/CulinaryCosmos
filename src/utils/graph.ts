@@ -172,10 +172,20 @@ export function spreadNodes(
   }));
 }
 
+/** Deterministic pseudo-random in [-0.5, 0.5] from a string seed. */
+function seededJitter(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h << 5) - h + seed.charCodeAt(i);
+    h |= 0;
+  }
+  return ((Math.abs(h) % 1000) / 1000 - 0.5);
+}
+
 /**
  * Spread nodes by category so each category forms a cluster.
  * Categories are arranged in a circular layout; nodes within each
- * category are placed in a sub-cluster with slight jitter.
+ * category are placed in a sub-cluster with deterministic jitter.
  */
 export function spreadNodesByCategory(
   nodes: GraphNode[],
@@ -211,10 +221,12 @@ export function spreadNodesByCategory(
       const node = nodesInCat[i];
       const subX = (i % cols) * subSpacing - (cols * subSpacing) / 2;
       const subY = Math.floor(i / cols) * subSpacing - subSpacing;
+      const jx = seededJitter(`${node.id}-x`) * jitter;
+      const jy = seededJitter(`${node.id}-y`) * jitter;
       result.push({
         ...node,
-        x: cx + subX + (Math.random() - 0.5) * jitter,
-        y: cy + subY + (Math.random() - 0.5) * jitter,
+        x: cx + subX + jx,
+        y: cy + subY + jy,
       });
     }
   }

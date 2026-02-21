@@ -78,14 +78,14 @@ export default function HomePage() {
 
   const graphDataFiltered = useMemo(() => {
     if (!graphData) return { nodes: [], links: [] };
-    if (hiddenCategories.size === 0) {
-      return { nodes: graphData.nodes, links: graphData.links };
-    }
-    const visibleIds = new Set(
-      graphData.nodes
-        .filter((n) => !hiddenCategories.has(n.category ?? "other"))
-        .map((n) => n.id),
-    );
+    const visibleIds =
+      hiddenCategories.size === 0
+        ? new Set(graphData.nodes.map((n) => n.id))
+        : new Set(
+            graphData.nodes
+              .filter((n) => !hiddenCategories.has(n.category ?? "other"))
+              .map((n) => n.id),
+          );
     const nodes = graphData.nodes.filter((n) => visibleIds.has(n.id));
     const links = graphData.links.filter((link) => {
       const src =
@@ -101,10 +101,11 @@ export default function HomePage() {
     return { nodes, links };
   }, [graphData, hiddenCategories]);
 
-  const { nodeDegrees: nodeDegreesFiltered, maxDegree: maxDegreeFiltered } =
+  const { nodeDegrees: nodeDegreesFull, maxDegree: maxDegreeFull } =
     useMemo(() => {
+      if (!graphData) return { nodeDegrees: new Map<string, number>(), maxDegree: 1 };
       const degrees = new Map<string, number>();
-      for (const link of graphDataFiltered.links) {
+      for (const link of graphData.links) {
         const src =
           typeof link.source === "string"
             ? link.source
@@ -118,7 +119,7 @@ export default function HomePage() {
       }
       const max = Math.max(1, ...degrees.values());
       return { nodeDegrees: degrees, maxDegree: max };
-    }, [graphDataFiltered]);
+    }, [graphData]);
 
   useEffect(() => {
     if (!selectedNode || !graphDataFiltered.nodes.length) return;
@@ -255,11 +256,11 @@ export default function HomePage() {
       const n = node as GraphNode;
       const isHighlighted = highlightedNodeIds.has(n.id ?? "");
       const isSelected = selectedNode && n.id === selectedNode.id;
-      if (isHighlighted || isSelected) return 20;
-      const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
-      return 6 + 18 * (degree / maxDegreeFiltered);
+      if (isHighlighted || isSelected) return 12;
+      const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
+      return 3 + 9 * (degree / maxDegreeFull);
     },
-    [selectedNode, highlightedNodeIds, nodeDegreesFiltered, maxDegreeFiltered],
+    [selectedNode, highlightedNodeIds, nodeDegreesFull, maxDegreeFull],
   );
 
   const linkVisibilityFn = useCallback(
@@ -350,7 +351,7 @@ export default function HomePage() {
     const id = setTimeout(() => {
       const fg = graphRef.current;
       if (!fg) return;
-      (fg as { zoom?: (k: number) => void }).zoom?.(1.8);
+      (fg as { zoom?: (k: number) => void }).zoom?.(1.0);
 
       const numCategories = Object.keys(CATEGORY_LABELS).length;
       fg.d3Force(
@@ -359,7 +360,7 @@ export default function HomePage() {
           const n = d as GraphNode;
           const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
           return center.x;
-        }).strength(0.08),
+        }).strength(0.04),
       );
       fg.d3Force(
         "y",
@@ -367,7 +368,7 @@ export default function HomePage() {
           const n = d as GraphNode;
           const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
           return center.y;
-        }).strength(0.08),
+        }).strength(0.04),
       );
 
       const charge = fg.d3Force("charge") as {
@@ -376,9 +377,9 @@ export default function HomePage() {
       if (charge?.strength) {
         charge.strength((node: unknown) => {
           const n = node as { id?: string };
-          const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
-          const base = -20;
-          const extra = -60 * (degree / maxDegreeFiltered);
+          const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
+          const base = -12;
+          const extra = -36 * (degree / maxDegreeFull);
           return base + extra;
         });
       }
@@ -386,7 +387,7 @@ export default function HomePage() {
         distance?: (v: number) => unknown;
         strength?: (v: number | ((l: unknown, i: number, links: unknown[]) => number)) => unknown;
       };
-      if (link?.distance) link.distance(40);
+      if (link?.distance) link.distance(55);
       if (link?.strength) {
         link.strength((l: unknown) => {
           const linkObj = l as { source?: { id?: string } | string; target?: { id?: string } | string };
@@ -398,17 +399,17 @@ export default function HomePage() {
             typeof linkObj.target === "string"
               ? linkObj.target
               : linkObj.target?.id ?? "";
-          const d1 = nodeDegreesFiltered.get(srcId) ?? 0;
-          const d2 = nodeDegreesFiltered.get(tgtId) ?? 0;
+          const d1 = nodeDegreesFull.get(srcId) ?? 0;
+          const d2 = nodeDegreesFull.get(tgtId) ?? 0;
           const avgDegree = (d1 + d2) / 2;
-          const ratio = avgDegree / maxDegreeFiltered;
-          return 0.85 + 0.15 * Math.pow(ratio, 1.2);
+          const ratio = avgDegree / maxDegreeFull;
+          return 0.5 + 0.1 * Math.pow(ratio, 1.2);
         });
       }
       fg.d3ReheatSimulation?.();
     }, 0);
     return () => clearTimeout(id);
-  }, [graphDataFiltered, nodeDegreesFiltered, maxDegreeFiltered]);
+  }, [graphDataFiltered, nodeDegreesFull, maxDegreeFull]);
 
   useEffect(() => {
     if (!graphRef.current || !graphDataFiltered.nodes.length) return;
@@ -421,12 +422,17 @@ export default function HomePage() {
       );
       return;
     }
-    if (!selectedNode) return;
-    const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
-    const n = (node ?? selectedNode) as { x?: number; y?: number };
-    if (typeof n.x !== "number" || typeof n.y !== "number") return;
-    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(n.x, n.y, 400);
-    (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
+    if (selectedNode) {
+      const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
+      const n = (node ?? selectedNode) as { x?: number; y?: number };
+      if (typeof n.x === "number" && typeof n.y === "number") {
+        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(n.x, n.y, 400);
+        (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
+      }
+      return;
+    }
+    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(0, 0, 400);
+    (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(1.0, 400);
   }, [selectedNode, highlightedNodes, graphDataFiltered]);
 
   if (loading) {
@@ -625,16 +631,16 @@ export default function HomePage() {
             nodeLabel={(node) => (node as GraphNode).name}
             nodeColor={nodeColorFn}
             nodeVal={nodeValFn}
-            nodeRelSize={2}
+            nodeRelSize={1}
             linkVisibility={linkVisibilityFn}
             linkColor={linkColorFn}
             linkWidth={linkWidthFn}
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={clearHighlight}
-            cooldownTicks={500}
+            cooldownTicks={800}
             d3AlphaDecay={0.018}
-            d3VelocityDecay={0.25}
+            d3VelocityDecay={0.7}
           />
           )}
         </div>
