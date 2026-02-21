@@ -34,6 +34,14 @@ NON_FOOD_WORDS = {
     "fall", "spring", "winter", "summer", "season", "seasons",
     "august", "september", "october", "november", "december",
     "january", "february", "march", "april", "may", "june", "july",
+    "but", "catalogs", "color", "other", "then", "which", "with", "you",
+    "many", "most", "first", "done", "off", "half", "good", "nice",
+    "rich", "hot", "cold", "warm", "cooling", "warming", "refreshing",
+    "ripe", "unripe", "young", "old", "new", "soft", "hard", "dry",
+    "wet", "fatty", "lean", "mild", "strong", "sweet", "sour", "salty",
+    "bitter", "umami", "texture", "heat", "crunch", "crunchy", "flaky",
+    "velvety", "greasy", "grainy", "luxurious", "heartier", "meatier",
+    "fattier", "lighter", "stronger", "sweeter", "deeper", "deeper flavor",
 }
 
 # Substring patterns - node contains these and is not a food
@@ -41,7 +49,41 @@ NON_FOOD_SUBSTRINGS = {
     " as a ", " as crust", " as dessert", " see ", " see also",
     " dishes", " foods", " appetizers", " cuisines", " beverages",
     "ingredient", "method", " to ", " for granted", " and other ",
+    " and/or ", "brined first", "for braising", "for poultry", "for sushi",
+    "café ", "cafe ", " bistro", " restaurant", " grill", " room",
+    " washington", " vienna", " hoboken", " brasserie", " eat place",
+    " he said", " i like", " i recently", " i use the", " which i",
+    " which is", " which makes", " which means", " which produce",
+    " which they", " which adds", " we tasted", " you can", " you wouldn't",
+    " then add", " then wipe", " throw it out", " to finish this",
+    " have two favorite", " knew it", " of course", " in terms of",
+    " so many childhood", " spread them out", " used the husks",
+    " using smoked salt", " virtually all", " wash greens",
+    " while in large", " your life", "—david", "— ",
 }
+
+# Place names (US states, cities, countries when standalone)
+PLACE_NAMES = {
+    "alabama", "arizona", "california", "florida", "idaho", "massachusetts",
+    "new jersey", "new york", "oregon", "sonoma", "vermont", "virginia",
+    "washington", "rome", "japan", "spain", "france", "tuscan", "venetian",
+    "new england", "southern", "northern", "eastern", "peking", "szechuan",
+    "boston", "pocantico",
+}
+
+# Restaurant/cafe names (often appear in chef quotes)
+RESTAURANT_PATTERNS = (
+    "café boulud", "café annie", "café gray", "café juanita",
+    "le bernardin", "union square café", "eleven madison park",
+    "daniel", "nobu", "jean georges", "charlie trotter",
+    "felidia", "san domenico", "frontera grill", "topolobampo",
+    "everest", "farallon", "gary danko", "gilt", "imperial fez",
+    "kinkead", "la côte brasserie", "locke-ober", "monday room",
+    "naha", "osteria mozza", "payard", "rover's", "sanford",
+    "trade lake", "t'afia", "tía pol", "veritas", "vij's",
+    "zuni café", "zafra", "cucharamama", "brasserie jo",
+    "colvin run", "citronelle", "esca", "hook", "cashion",
+)
 
 # Exact non-food phrases (multi-word)
 NON_FOOD_PHRASES = {
@@ -55,6 +97,18 @@ NON_FOOD_PHRASES = {
     "ice wine wine", "or bomba", "or carnaroli", "or piquillo",
     "or raisins", "or roasted", "or stinky", "see also",
     "serve", "seedless", "baby round", "café con leche",
+    "blueberries for the summer", "name of the dish", "it a deep",
+    "it's their smell", "which adds color", "fresh shell",
+    " and will", "of all vegetables", "of the brine", "of course",
+    "fruits and fruit juices", "vegetables and root vegetables",
+    "vegetables and vegetable juices", "meats and meat loaf",
+    "some high-fiber vitamin", "some water", "so many childhood",
+    "sour notes enhance bitterness", "to finish this dish",
+    "then wipe off the", "these short", "used the husks",
+    "using smoked salt provides", "virtually all vegetables",
+    "was seared well", "we tasted it", "which i pair with",
+    "which produce a juice", "which they added to",
+    "while in large doses", "you wouldn't", "your life",
 }
 
 
@@ -64,6 +118,14 @@ def is_food_item(node_id: str) -> bool:
 
     # Exact match non-food
     if lower in NON_FOOD_WORDS or lower in NON_FOOD_PHRASES:
+        return False
+
+    # Place names (standalone)
+    if lower in PLACE_NAMES:
+        return False
+
+    # Restaurant/cafe names
+    if any(r in lower for r in RESTAURANT_PATTERNS):
         return False
 
     # Single word in blocklist
@@ -89,6 +151,10 @@ def is_food_item(node_id: str) -> bool:
 
     # " as a " - phrase
     if " as a " in lower or " as " in lower and " as crust" in lower:
+        return False
+
+    # Starts with "and " or "and/or" - phrase fragment
+    if lower.startswith("and ") or lower.startswith("and/or"):
         return False
 
     # Too short

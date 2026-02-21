@@ -5,7 +5,12 @@ import dynamic from "next/dynamic";
 import type { GraphNode, GraphData } from "@/types/graph";
 import { SearchBar } from "@/components/SearchBar";
 import { useSearch } from "@/hooks/useSearch";
-import { hashToColor, getPairings, spreadNodes } from "@/utils/graph";
+import {
+  hashToColor,
+  getPairingsWithLevel,
+  spreadNodes,
+  CATEGORY_LABELS,
+} from "@/utils/graph";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -28,6 +33,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [affinity, setAffinity] = useState(0);
+  const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
 
   useEffect(() => {
     fetch("/api/graph-data")
@@ -106,14 +112,59 @@ export default function HomePage() {
       return { nodeDegrees: degrees, maxDegree: max };
     }, [graphDataFiltered]);
 
-  const pairings = useMemo(() => {
+  const pairingsWithLevel = useMemo(() => {
     if (!selectedNode || !graphDataFiltered.nodes.length) return [];
-    return getPairings(
+    return getPairingsWithLevel(
       selectedNode.id,
       graphDataFiltered.links,
       graphDataFiltered.nodes,
     );
   }, [selectedNode, graphDataFiltered]);
+
+  const pairings = useMemo(
+    () => pairingsWithLevel.map((p) => p.node),
+    [pairingsWithLevel],
+  );
+
+  const holyGrailPairings = useMemo(() => {
+    if (!graphDataFiltered.nodes.length) return [];
+    const nodeMap = new Map(graphDataFiltered.nodes.map((n) => [n.id, n]));
+    return graphDataFiltered.links
+      .filter((link) => (link as { value?: number }).value === 4)
+      .map((link) => {
+        const src =
+          typeof link.source === "string"
+            ? link.source
+            : (link.source as { id?: string })?.id ?? "";
+        const tgt =
+          typeof link.target === "string"
+            ? link.target
+            : (link.target as { id?: string })?.id ?? "";
+        const srcNode = nodeMap.get(src);
+        const tgtNode = nodeMap.get(tgt);
+        return srcNode && tgtNode
+          ? { source: srcNode, target: tgtNode }
+          : null;
+      })
+      .filter((p): p is { source: GraphNode; target: GraphNode } => p !== null);
+  }, [graphDataFiltered]);
+
+  const pairingsByCategory = useMemo(() => {
+    const groups = new Map<string, { node: GraphNode; level: number }[]>();
+    const order = Object.keys(CATEGORY_LABELS);
+    for (const p of pairingsWithLevel) {
+      const cat = p.node.category ?? "other";
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat)!.push(p);
+    }
+    return order
+      .filter((cat) => groups.has(cat))
+      .map((cat) => ({
+        category: cat,
+        label: CATEGORY_LABELS[cat] ?? cat,
+        items: groups.get(cat)!.sort((a, b) => b.level - a.level),
+      }));
+  }, [pairingsWithLevel]);
 
   const search = useSearch(graphDataFiltered.nodes);
 
@@ -188,7 +239,9 @@ export default function HomePage() {
 
   const linkVisibilityFn = useCallback(
     (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
-      if (!selectedNode) return false;
+      const val = link.value as number | undefined;
+      const isLevel4 = val === 4;
+      if (!selectedNode) return isLevel4;
       const src =
         typeof link.source === "string"
           ? link.source
@@ -206,7 +259,9 @@ export default function HomePage() {
     (
       link: { source?: unknown; target?: unknown } & Record<string, unknown>,
     ) => {
-      if (!selectedNode) return "rgba(0,0,0,0)";
+      const val = link.value as number | undefined;
+      const isLevel4 = val === 4;
+      if (!selectedNode) return isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
       const src =
         typeof link.source === "string"
           ? link.source
@@ -225,7 +280,9 @@ export default function HomePage() {
     (
       link: { source?: unknown; target?: unknown } & Record<string, unknown>,
     ) => {
-      if (!selectedNode) return 1;
+      const val = link.value as number | undefined;
+      const isLevel4 = val === 4;
+      if (!selectedNode) return isLevel4 ? 1 : 0;
       const src =
         typeof link.source === "string"
           ? link.source
@@ -331,10 +388,22 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
-      <div className='absolute top-4 right-4 z-20 w-56'>
-        <label className='block text-xs font-medium text-gray-600 mb-1.5'>
-          Affinity (min connections)
+      <div className='absolute top-4 right-4 z-20 w-56 space-y-3'>
+        <label className='flex items-center gap-2 cursor-pointer'>
+          <input
+            type='checkbox'
+            checked={showHolyGrailPanel}
+            onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
+            className='rounded border-gray-300'
+          />
+          <span className='text-xs font-medium text-gray-600'>
+            Show Holy Grail pairings
+          </span>
         </label>
+        <div>
+          <label className='block text-xs font-medium text-gray-600 mb-1.5'>
+            Affinity (min connections)
+          </label>
         <input
           type='range'
           min={0}
@@ -347,6 +416,7 @@ export default function HomePage() {
           {affinity}% — showing links between ingredients with ≥{" "}
           {Math.ceil((affinity / 100) * maxDegree)} connections
         </p>
+        </div>
       </div>
       <SearchBar
         query={search.query}
@@ -390,7 +460,7 @@ export default function HomePage() {
           />
           )}
         </div>
-        {selectedNode && (
+        {selectedNode ? (
           <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
             <div className='flex items-center justify-between mb-3'>
               <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
@@ -402,31 +472,66 @@ export default function HomePage() {
               </button>
             </div>
             <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
-            <ul className='space-y-1.5'>
-              {pairings.length > 0 ? (
-                pairings.map((p) => (
-                  <li key={p.id}>
+            {pairingsByCategory.length > 0 ? (
+              <div className='space-y-3'>
+                {pairingsByCategory.map(({ category, label, items }) => (
+                  <div key={category}>
+                    <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5'>
+                      {label}
+                    </p>
+                    <ul className='space-y-1'>
+                      {items.map(({ node, level }) => (
+                        <li key={node.id}>
+                          <button
+                            onClick={() => {
+                              const n = graphDataFiltered.nodes.find(
+                                (x) => x.id === node.id,
+                              );
+                              if (n) setSelectedNode(n);
+                            }}
+                            className='text-primary font-medium hover:underline text-left text-sm'
+                          >
+                            {node.name}
+                            {level >= 3 && (
+                              <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
+                                {level === 4 ? '★★' : '★'}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className='text-gray-500 text-xs'>No pairings in dataset</p>
+            )}
+          </aside>
+        ) : showHolyGrailPanel ? (
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-56 max-h-[60vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
+            <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
+            <p className='text-xs text-gray-500 mb-3'>
+              Most highly recommended pairings from The Flavor Bible
+            </p>
+            {holyGrailPairings.length > 0 ? (
+              <ul className='space-y-1.5'>
+                {holyGrailPairings.map(({ source, target }) => (
+                  <li key={`${source.id}-${target.id}`}>
                     <button
-                      onClick={() => {
-                        const node = graphDataFiltered.nodes.find(
-                          (n) => n.id === p.id,
-                        );
-                        if (node) setSelectedNode(node);
-                      }}
-                      className='text-primary font-medium hover:underline text-left text-sm'
+                      onClick={() => setSelectedNode(source)}
+                      className='text-primary font-medium hover:underline text-left text-sm block w-full'
                     >
-                      {p.name}
+                      {source.name} — {target.name}
                     </button>
                   </li>
-                ))
-              ) : (
-                <li className='text-gray-500 text-xs'>
-                  No pairings in dataset
-                </li>
-              )}
-            </ul>
+                ))}
+              </ul>
+            ) : (
+              <p className='text-gray-500 text-xs'>No holy grail pairings in dataset</p>
+            )}
           </aside>
-        )}
+        ) : null}
       </div>
     </div>
   );

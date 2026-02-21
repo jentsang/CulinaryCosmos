@@ -152,6 +152,15 @@ BLOCKLIST = {
     "restaurant",
     "chef's",
     "chef ",
+    # Instruction/descriptive phrases (not ingredients)
+    "for morel",
+    "buying and cleaning",
+    "scoop out the",
+    "from the cheese",
+    "from the ham",
+    "from the pig",
+    "putting the fish",
+    "then the corn",
 }
 
 # Regex patterns - node is removed if it matches
@@ -169,6 +178,9 @@ BLOCKLIST_REGEX = [
     r"^or honey", r"^on me ",
     r"^a\s",           # "a dish", "a cake" - phrase
     r"^an\s",
+    r"^for\s",           # "for morel mushrooms", "for poultry" - instruction, not ingredient
+    r"\s+and\s+",        # "buying and cleaning mushrooms", "salt and pepper" - phrase or multi-item
+    r"\s+the\s+",        # "scoop out the mushrooms", "in the shell" - phrase
     r"\s(cuisine|cuisines)\s*$",  # ends with "cuisine" - e.g. "alsatian cuisine"
     r"^cuisine$",       # just "cuisine"
     r"^\d",              # starts with digit
