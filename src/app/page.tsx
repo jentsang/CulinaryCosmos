@@ -2,65 +2,16 @@
 
 import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import type { GraphNode, GraphLink, GraphData } from "@/types/graph";
+import type { GraphNode, GraphData } from "@/types/graph";
+import { SearchBar } from "@/components/SearchBar";
+import { useSearch } from "@/hooks/useSearch";
+import { hashToColor, getPairings, spreadNodes } from "@/utils/graph";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
 const NODE_COLORS = ["#007AFF", "#34C759", "#FF9500", "#AF52DE"];
-
-function hashToColor(str: string): string {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h << 5) - h + str.charCodeAt(i);
-    h |= 0;
-  }
-  const hue = Math.abs(h) % 360;
-  return `hsl(${hue}, 65%, 55%)`;
-}
-
-function getPairings(
-  nodeId: string,
-  links: GraphLink[],
-  nodes: GraphNode[],
-): GraphNode[] {
-  const ids = new Set<string>();
-  for (const link of links) {
-    const src =
-      typeof link.source === "string"
-        ? link.source
-        : ((link.source as { id?: string }).id ?? "");
-    const tgt =
-      typeof link.target === "string"
-        ? link.target
-        : ((link.target as { id?: string }).id ?? "");
-    if (src === nodeId) ids.add(tgt);
-    if (tgt === nodeId) ids.add(src);
-  }
-  return nodes.filter((n) => ids.has(n.id));
-}
-
-function spreadNodes(
-  nodes: GraphNode[],
-): (GraphNode & { x: number; y: number })[] {
-  const n = nodes.length;
-  const cols = Math.ceil(Math.sqrt(n));
-  const spacing = 70;
-  const offset = (cols * spacing) / 2;
-  const jitter = spacing * 0.6;
-  return nodes.map((node, i) => ({
-    ...node,
-    x:
-      (i % cols) * spacing -
-      offset +
-      (Math.random() - 0.5) * jitter,
-    y:
-      Math.floor(i / cols) * spacing -
-      offset +
-      (Math.random() - 0.5) * jitter,
-  }));
-}
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,8 +27,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
   const [affinity, setAffinity] = useState(0);
 
   useEffect(() => {
@@ -165,6 +114,8 @@ export default function HomePage() {
       graphDataFiltered.nodes,
     );
   }, [selectedNode, graphDataFiltered]);
+
+  const search = useSearch(graphDataFiltered.nodes);
 
   useEffect(() => {
     if (!graphData) return;
@@ -354,14 +305,6 @@ export default function HomePage() {
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
   }, [selectedNode, graphDataFiltered]);
 
-  const searchResults = useMemo(() => {
-    if (!graphDataFiltered.nodes.length || !searchQuery.trim()) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return graphDataFiltered.nodes
-      .filter((n) => n.name.toLowerCase().includes(q))
-      .slice(0, 10);
-  }, [graphDataFiltered, searchQuery]);
-
   if (loading) {
     return (
       <div className='flex flex-col items-center justify-center min-h-screen px-6'>
@@ -405,41 +348,24 @@ export default function HomePage() {
           {Math.ceil((affinity / 100) * maxDegree)} connections
         </p>
       </div>
-      <div className='absolute top-4 left-4 z-10 w-72'>
-        <input
-          type='text'
-          placeholder='Search flavours...'
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setSearchFocused(true)}
-          onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-          className='w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm'
-        />
-        {searchFocused && searchQuery.trim() && (
-          <div className='absolute top-full left-0 right-0 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden max-h-60 overflow-y-auto'>
-            {searchResults.length > 0 ? (
-              searchResults.map((node) => (
-                <button
-                  key={node.id}
-                  type='button'
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setSelectedNode(node);
-                    setSearchQuery("");
-                    setSearchFocused(false);
-                  }}
-                  className='w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0'
-                >
-                  {node.name}
-                </button>
-              ))
-            ) : (
-              <div className='px-4 py-3 text-sm text-gray-500'>No matches</div>
-            )}
-          </div>
-        )}
-      </div>
-      <div className='flex flex-1 min-h-0'>
+      <SearchBar
+        query={search.query}
+        onQueryChange={search.setQuery}
+        focused={search.focused}
+        onFocusChange={search.setFocused}
+        results={search.fuzzyResults}
+        onSelectNode={setSelectedNode}
+        onSubmit={() =>
+          search.submitSearch(setSelectedNode, (result) => {
+            if (result.type === "prompt") {
+              // TODO: handle LLM result when integrated
+            }
+          })
+        }
+        isSearching={search.isSearching}
+        promptError={search.promptError}
+      />
+      <div className='flex flex-1 min-h-0 relative'>
         <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-gray-50 relative w-full h-full'>
           {dimensions.width > 0 && dimensions.height > 0 && (
           <ForceGraph2D
@@ -465,12 +391,12 @@ export default function HomePage() {
           )}
         </div>
         {selectedNode && (
-          <aside className='w-52 max-h-[50vh] self-center border-l border-gray-200 bg-white px-3 py-4 overflow-y-auto shrink-0 flex flex-col rounded-lg shadow-lg mx-2 my-2'>
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
             <div className='flex items-center justify-between mb-3'>
               <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
               <button
                 onClick={() => setSelectedNode(null)}
-                className='text-sm text-gray-500 hover:text-gray-700'
+                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
               >
                 ✕
               </button>

@@ -2,4 +2,9 @@
  * API services. LLM integration will be in the backend.
  */
 
-export {};
+export {
+  fuzzyMatchNode,
+  fuzzyMatchNodes,
+  search,
+  type SearchResult,
+} from "./searchService";
