@@ -4,6 +4,26 @@
 
 import type { GraphNode, GraphLink } from "@/types/graph";
 
+/** Display labels for ingredient categories (from metadata.categories). */
+export const CATEGORY_LABELS: Record<string, string> = {
+  cuisine: "Cuisine & Region",
+  meat_poultry: "Meat & Poultry",
+  seafood: "Seafood & Fish",
+  dairy_cheese: "Dairy & Cheese",
+  vegetables: "Vegetables",
+  herbs_spices: "Herbs & Spices",
+  fruits: "Fruits",
+  legumes: "Legumes & Beans",
+  grains_starches: "Grains & Starches",
+  nuts_seeds: "Nuts & Seeds",
+  oils_vinegars: "Oils & Vinegars",
+  sauces_condiments: "Sauces & Condiments",
+  beverages: "Beverages",
+  sweets_desserts: "Sweets & Desserts",
+  techniques_dishes: "Techniques & Dish Types",
+  other: "Other",
+};
+
 export function hashToColor(str: string): string {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
@@ -35,6 +55,65 @@ export function getPairings(
   return nodes.filter((n) => ids.has(n.id));
 }
 
+export interface PairingWithLevel {
+  node: GraphNode;
+  level: number;
+}
+
+export function getPairingsWithLevel(
+  nodeId: string,
+  links: GraphLink[],
+  nodes: GraphNode[],
+): PairingWithLevel[] {
+  const pairingsMap = new Map<string, number>();
+  for (const link of links) {
+    const src =
+      typeof link.source === "string"
+        ? link.source
+        : ((link.source as { id?: string }).id ?? "");
+    const tgt =
+      typeof link.target === "string"
+        ? link.target
+        : ((link.target as { id?: string }).id ?? "");
+    const level = link.value ?? 1;
+    if (src === nodeId) {
+      const existing = pairingsMap.get(tgt);
+      if (existing === undefined || level > existing) pairingsMap.set(tgt, level);
+    }
+    if (tgt === nodeId) {
+      const existing = pairingsMap.get(src);
+      if (existing === undefined || level > existing) pairingsMap.set(src, level);
+    }
+  }
+  return Array.from(pairingsMap.entries())
+    .map(([id, level]) => {
+      const node = nodes.find((n) => n.id === id);
+      return node ? { node, level } : null;
+    })
+    .filter((p): p is PairingWithLevel => p !== null);
+}
+
+/** Category order for layout (matches CATEGORY_LABELS). */
+const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
+
+/** Radius for category cluster layout. */
+const LAYOUT_RADIUS = 450;
+
+/** Get (x, y) center for a category by its index (0..numCategories-1). */
+export function getCategoryCenter(categoryIndex: number, numCategories: number): { x: number; y: number } {
+  const angle = (2 * Math.PI * categoryIndex) / numCategories - Math.PI / 2;
+  return {
+    x: LAYOUT_RADIUS * Math.cos(angle),
+    y: LAYOUT_RADIUS * Math.sin(angle),
+  };
+}
+
+/** Map category id to layout index. */
+export function getCategoryIndex(category: string | undefined): number {
+  const idx = CATEGORY_ORDER.indexOf(category ?? "other");
+  return idx >= 0 ? idx : CATEGORY_ORDER.indexOf("other");
+}
+
 export function spreadNodes(
   nodes: GraphNode[],
 ): (GraphNode & { x: number; y: number })[] {
@@ -54,4 +133,53 @@ export function spreadNodes(
       offset +
       (Math.random() - 0.5) * jitter,
   }));
+}
+
+/**
+ * Spread nodes by category so each category forms a cluster.
+ * Categories are arranged in a circular layout; nodes within each
+ * category are placed in a sub-cluster with slight jitter.
+ */
+export function spreadNodesByCategory(
+  nodes: GraphNode[],
+): (GraphNode & { x: number; y: number })[] {
+  const categoryToNodes = new Map<string, GraphNode[]>();
+  for (const node of nodes) {
+    const cat = node.category ?? "other";
+    if (!categoryToNodes.has(cat)) categoryToNodes.set(cat, []);
+    categoryToNodes.get(cat)!.push(node);
+  }
+
+  const numCategories = CATEGORY_ORDER.length;
+  const radius = LAYOUT_RADIUS;
+  const subSpacing = 22;
+  const jitter = 8;
+
+  const result: (GraphNode & { x: number; y: number })[] = [];
+  const categoryToIndex = new Map<string, number>();
+  let nextIdx = 0;
+  for (const cat of CATEGORY_ORDER) {
+    categoryToIndex.set(cat, nextIdx++);
+  }
+
+  for (const [cat, nodesInCat] of categoryToNodes) {
+    const catIdx = categoryToIndex.get(cat) ?? categoryToIndex.get("other") ?? 0;
+
+    const angle = (2 * Math.PI * catIdx) / numCategories - Math.PI / 2;
+    const cx = radius * Math.cos(angle);
+    const cy = radius * Math.sin(angle);
+
+    const cols = Math.ceil(Math.sqrt(nodesInCat.length));
+    for (let i = 0; i < nodesInCat.length; i++) {
+      const node = nodesInCat[i];
+      const subX = (i % cols) * subSpacing - (cols * subSpacing) / 2;
+      const subY = Math.floor(i / cols) * subSpacing - subSpacing;
+      result.push({
+        ...node,
+        x: cx + subX + (Math.random() - 0.5) * jitter,
+        y: cy + subY + (Math.random() - 0.5) * jitter,
+      });
+    }
+  }
+  return result;
 }

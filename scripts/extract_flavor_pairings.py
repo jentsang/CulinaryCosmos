@@ -110,29 +110,46 @@ def is_ingredient_header(line: str) -> bool:
     return upper_ratio >= 0.8
 
 
-def parse_pairing_line(line: str) -> list[str]:
-    """Parse a line of pairings into individual ingredients."""
+def parse_pairing_line(line: str, is_bold: bool = False) -> list[tuple[str, int]]:
+    """
+    Parse a line of pairings into (ingredient, recommendation_level) tuples.
+    Level: 1=regular, 2=bold, 3=bold caps, 4=holy grail (*BOLD CAPS)
+    """
     # Skip KEY/legend lines
     lower = line.lower()
     if 'key:' in lower or 'flavors mentioned' in lower or 'those in' in lower or 'recommended by' in lower:
         return []
-    # Split by comma, but be careful with "e.g., X" and "esp. X"
-    line = line.strip()
-    if not line:
+    line_raw = line.strip()
+    if not line_raw:
         return []
-    # Split on comma
-    parts = [p.strip() for p in line.split(',')]
-    ingredients = []
+
+    # Detect recommendation level from raw text (before normalization)
+    has_asterisk = line_raw.lstrip().startswith('*')
+    first_part = line_raw.split(',')[0].strip()
+    first_word = first_part.split()[0] if first_part else ""
+    is_all_caps = first_word.isupper() and len(first_word) > 1
+
+    if has_asterisk:
+        level = 4  # Holy Grail
+    elif is_all_caps:
+        level = 3  # BOLD CAPS (very highly recommended)
+    elif is_bold:
+        level = 2  # Bold (recommended by a number of experts)
+    else:
+        level = 1  # Regular
+
+    # Split by comma and extract ingredients
+    parts = [p.strip() for p in line_raw.split(',')]
+    result = []
     for part in parts:
-        # Take the main ingredient (before "esp." or "e.g.")
         part = re.sub(r'\s+(esp\.|e\.g\.)\s+.*$', '', part, flags=re.I)
         part = re.sub(r'\s*\([^)]*\)\s*', ' ', part)
-        part = part.strip(' )')  # Remove orphan parens from split
+        part = part.strip(' )')
         part = ' '.join(part.split())
         norm = normalize_ingredient(part)
         if norm and is_valid_ingredient(norm):
-            ingredients.append(norm)
-    return ingredients
+            result.append((norm, level))
+    return result
 
 
 def parse_flavor_affinity(line: str) -> list[tuple[str, ...]]:
@@ -165,6 +182,7 @@ def extract_from_pdf(pdf_path: Path) -> tuple[dict, list[tuple]]:
         - affinity_edges: list of (ingredient_a, ingredient_b) from Flavor Affinities
     """
     pairings = defaultdict(set)
+    edge_levels = {}
     affinity_edges = []
     current_ingredient = None
     in_affinities = False
@@ -173,13 +191,19 @@ def extract_from_pdf(pdf_path: Path) -> tuple[dict, list[tuple]]:
         end_page = min(CHARTS_END_PAGE, len(pdf.pages))
         for page_num in range(CHARTS_START_PAGE, end_page):
             page = pdf.pages[page_num]
-            text = page.extract_text()
-            if not text:
+            words = page.extract_words(extra_attrs=["fontname"])
+            if not words:
                 continue
 
-            lines = text.split('\n')
-            for line in lines:
-                line_stripped = line.strip()
+            line_groups = defaultdict(list)
+            for w in words:
+                top_key = round(w["top"] / 3) * 3
+                line_groups[top_key].append(w)
+
+            for top in sorted(line_groups.keys()):
+                wlist = line_groups[top]
+                line_stripped = " ".join(w["text"] for w in wlist).strip()
+                is_bold = any("Bold" in w.get("fontname", "") for w in wlist)
                 if not line_stripped:
                     continue
 
@@ -195,6 +219,7 @@ def extract_from_pdf(pdf_path: Path) -> tuple[dict, list[tuple]]:
                     for a, b in edges:
                         pairings[a].add(b)
                         pairings[b].add(a)
+                        edge_levels[frozenset([a, b])] = max(edge_levels.get(frozenset([a, b]), 1), 2)
                     continue
 
                 # New ingredient header
@@ -219,18 +244,20 @@ def extract_from_pdf(pdf_path: Path) -> tuple[dict, list[tuple]]:
                         current_ingredient = normalize_ingredient(line_stripped.split(':')[0].strip())
                         continue
 
-                    ingredients = parse_pairing_line(line_stripped)
+                    parsed = parse_pairing_line(line_stripped, is_bold=is_bold)
                     if current_ingredient:
-                        for ing in ingredients:
+                        for ing, level in parsed:
                             if ing and ing != current_ingredient:
                                 pairings[current_ingredient].add(ing)
                                 pairings[ing].add(current_ingredient)
+                                key = frozenset([current_ingredient, ing])
+                                edge_levels[key] = max(edge_levels.get(key, 1), level)
 
-    return dict(pairings), affinity_edges
+    return dict(pairings), edge_levels, affinity_edges
 
 
-def build_edges(pairings: dict) -> list[dict]:
-    """Convert pairings dict to list of unique edges with optional weight."""
+def build_edges(pairings: dict, edge_levels: dict | None = None) -> list[dict]:
+    """Convert pairings dict to list of unique edges. Weight = recommendation level (1-4)."""
     seen = set()
     edges = []
     for ing_a, paired in pairings.items():
@@ -238,10 +265,14 @@ def build_edges(pairings: dict) -> list[dict]:
             key = tuple(sorted([ing_a, ing_b]))
             if key not in seen:
                 seen.add(key)
+                level = 1
+                if edge_levels:
+                    level = edge_levels.get(frozenset([ing_a, ing_b]), 1)
                 edges.append({
                     "source": ing_a,
                     "target": ing_b,
-                    "weight": 1
+                    "weight": level,
+                    "recommendation_level": level,
                 })
     return edges
 
@@ -256,24 +287,26 @@ def main():
         return 1
 
     print("Extracting flavour pairings from The Flavor Bible...")
-    pairings, affinity_edges = extract_from_pdf(pdf_path)
+    pairings, edge_levels, affinity_edges = extract_from_pdf(pdf_path)
 
     # Filter to valid ingredients only
     valid = {k for k in pairings if is_valid_ingredient(k)}
     pairings = {k: {x for x in v if is_valid_ingredient(x)} for k, v in pairings.items() if k in valid}
+    # Filter edge_levels to valid pairs only
+    edge_levels = {k: v for k, v in edge_levels.items() if k.issubset(valid)}
 
     # Build nodes (all unique ingredients)
     nodes = sorted(set(pairings.keys()))
-    edges = build_edges(pairings)
+    edges = build_edges(pairings, edge_levels)
 
-    # Count affinity edges for weighting (edges from Flavor Affinities are stronger)
+    # Mark affinity edges (Flavor Affinities section)
     affinity_set = {tuple(sorted([a, b])) for a, b in affinity_edges}
     for e in edges:
         key = tuple(sorted([e["source"], e["target"]]))
         if key in affinity_set:
-            e["weight"] = 2  # Boost for explicit affinity
             e["from_affinity"] = True
 
+    level_counts = {i: sum(1 for e in edges if e["weight"] == i) for i in range(1, 5)}
     dataset = {
         "nodes": [{"id": n, "label": n} for n in nodes],
         "edges": edges,
@@ -281,7 +314,14 @@ def main():
             "source": "The Flavor Bible (Dornenburg & Page, 2008)",
             "total_nodes": len(nodes),
             "total_edges": len(edges),
-            "affinity_edges": len(affinity_set)
+            "affinity_edges": len(affinity_set),
+            "recommendation_levels": {
+                "1": "regular (suggested by one or more experts)",
+                "2": "bold (recommended by a number of experts)",
+                "3": "bold caps (very highly recommended)",
+                "4": "holy grail (*bold caps, most highly recommended)",
+            },
+            "level_counts": level_counts,
         }
     }
 
