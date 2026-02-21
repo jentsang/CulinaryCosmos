@@ -241,14 +241,20 @@ export default function HomePage() {
       const isHighlighted = highlightedNodeIds.has(n.id ?? "");
       const isSelected = selectedNode && n.id === selectedNode.id;
       const isPairing = selectedNode && pairings.some((p) => p.id === n.id);
+      if (
+        (highlightedNodes.length > 0 || selectedNode) &&
+        !isHighlighted &&
+        !isSelected &&
+        !isPairing
+      )
+        return "#9CA3AF";
       if (isHighlighted) return "#FF3B30";
       if (isSelected) return "#FF3B30";
-      if (isPairing) return "#34C759";
       if (n.category) return hashToColor(n.category, true);
       const g = n.group ?? 0;
       return NODE_COLORS[g % NODE_COLORS.length];
     },
-    [selectedNode, pairings, highlightedNodeIds],
+    [selectedNode, pairings, highlightedNodeIds, highlightedNodes.length],
   );
 
   const nodeValFn = useCallback(
