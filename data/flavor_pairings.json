@@ -251,11 +251,6 @@
       "category": "vegetables"
     },
     {
-      "id": "arugula salad with cucumber",
-      "label": "arugula salad with cucumber",
-      "category": "vegetables"
-    },
-    {
       "id": "asiago",
       "label": "asiago",
       "category": "dairy_cheese"
@@ -776,11 +771,6 @@
       "category": "herbs_spices"
     },
     {
-      "id": "bananas",
-      "label": "bananas",
-      "category": "fruits"
-    },
-    {
       "id": "broccoli",
       "label": "broccoli",
       "category": "vegetables"
@@ -791,8 +781,8 @@
       "category": "vegetables"
     },
     {
-      "id": "carrots",
-      "label": "carrots",
+      "id": "carrot",
+      "label": "carrot",
       "category": "vegetables"
     },
     {
@@ -826,8 +816,8 @@
       "category": "herbs_spices"
     },
     {
-      "id": "peaches",
-      "label": "peaches",
+      "id": "peach",
+      "label": "peach",
       "category": "vegetables"
     },
     {
@@ -989,11 +979,6 @@
       "id": "brunch",
       "label": "brunch",
       "category": "other"
-    },
-    {
-      "id": "bruschetta with burrata cheese",
-      "label": "bruschetta with burrata cheese",
-      "category": "dairy_cheese"
     },
     {
       "id": "buffalo rib eye",
@@ -1284,11 +1269,6 @@
       "id": "carpaccio",
       "label": "carpaccio",
       "category": "techniques_dishes"
-    },
-    {
-      "id": "carrot",
-      "label": "carrot",
-      "category": "vegetables"
     },
     {
       "id": "carrot juice",
@@ -1819,11 +1799,6 @@
       "id": "chipotle",
       "label": "chipotle",
       "category": "herbs_spices"
-    },
-    {
-      "id": "dried red",
-      "label": "dried red",
-      "category": "other"
     },
     {
       "id": "fresh green",
@@ -2606,8 +2581,8 @@
       "category": "vegetables"
     },
     {
-      "id": "with green papaya",
-      "label": "with green papaya",
+      "id": "green papaya",
+      "label": "green papaya",
       "category": "fruits"
     },
     {
@@ -2786,11 +2761,6 @@
       "category": "other"
     },
     {
-      "id": "farfalle with stridoli",
-      "label": "farfalle with stridoli",
-      "category": "other"
-    },
-    {
       "id": "farmer\u2019s",
       "label": "farmer\u2019s",
       "category": "other"
@@ -2874,11 +2844,6 @@
       "id": "fettuccine",
       "label": "fettuccine",
       "category": "grains_starches"
-    },
-    {
-      "id": "fettuccine with house-made pancetta",
-      "label": "fettuccine with house-made pancetta",
-      "category": "meat_poultry"
     },
     {
       "id": "fiddlehead ferns",
@@ -4336,16 +4301,6 @@
       "category": "fruits"
     },
     {
-      "id": "linguine with clams",
-      "label": "linguine with clams",
-      "category": "seafood"
-    },
-    {
-      "id": "linguini with clams",
-      "label": "linguini with clams",
-      "category": "seafood"
-    },
-    {
       "id": "liptauer",
       "label": "liptauer",
       "category": "other"
@@ -4926,11 +4881,6 @@
       "category": "other"
     },
     {
-      "id": "mushrooms with potato boulang\u00e8re",
-      "label": "mushrooms with potato boulang\u00e8re",
-      "category": "vegetables"
-    },
-    {
       "id": "mushrooms year-round",
       "label": "mushrooms year-round",
       "category": "vegetables"
@@ -5059,11 +5009,6 @@
       "id": "nuts",
       "label": "nuts",
       "category": "other"
-    },
-    {
-      "id": "almonds",
-      "label": "almonds",
-      "category": "nuts_seeds"
     },
     {
       "id": "pistachios",
@@ -5481,11 +5426,6 @@
       "category": "grains_starches"
     },
     {
-      "id": "pasta with basil pesto",
-      "label": "pasta with basil pesto",
-      "category": "herbs_spices"
-    },
-    {
       "id": "pasta/noodles",
       "label": "pasta/noodles",
       "category": "grains_starches"
@@ -5513,11 +5453,6 @@
     {
       "id": "pea",
       "label": "pea",
-      "category": "vegetables"
-    },
-    {
-      "id": "peach",
-      "label": "peach",
       "category": "vegetables"
     },
     {
@@ -5549,11 +5484,6 @@
       "id": "pearl oyster bar",
       "label": "pearl oyster bar",
       "category": "seafood"
-    },
-    {
-      "id": "pears with anise",
-      "label": "pears with anise",
-      "category": "vegetables"
     },
     {
       "id": "pecan",
@@ -6071,11 +6001,6 @@
       "category": "vegetables"
     },
     {
-      "id": "pumpkin \u201clune\u201d with butter",
-      "label": "pumpkin \u201clune\u201d with butter",
-      "category": "dairy_cheese"
-    },
-    {
       "id": "punch",
       "label": "punch",
       "category": "other"
@@ -6244,11 +6169,6 @@
       "id": "ravioli",
       "label": "ravioli",
       "category": "grains_starches"
-    },
-    {
-      "id": "raw porcini with arugula",
-      "label": "raw porcini with arugula",
-      "category": "vegetables"
     },
     {
       "id": "red bliss",
@@ -6423,11 +6343,6 @@
     {
       "id": "ricotta cheese",
       "label": "ricotta cheese",
-      "category": "dairy_cheese"
-    },
-    {
-      "id": "ricotta gnocchi with asparagus",
-      "label": "ricotta gnocchi with asparagus",
       "category": "dairy_cheese"
     },
     {
@@ -6861,11 +6776,6 @@
       "category": "techniques_dishes"
     },
     {
-      "id": "sauce with lime",
-      "label": "sauce with lime",
-      "category": "fruits"
-    },
-    {
       "id": "cocktail",
       "label": "cocktail",
       "category": "other"
@@ -7083,16 +6993,6 @@
     {
       "id": "shellfish",
       "label": "shellfish",
-      "category": "seafood"
-    },
-    {
-      "id": "oysters",
-      "label": "oysters",
-      "category": "seafood"
-    },
-    {
-      "id": "scallops",
-      "label": "scallops",
       "category": "seafood"
     },
     {
@@ -7364,26 +7264,6 @@
       "id": "spaetzle",
       "label": "spaetzle",
       "category": "other"
-    },
-    {
-      "id": "spaghetti primavera with prosciutto",
-      "label": "spaghetti primavera with prosciutto",
-      "category": "meat_poultry"
-    },
-    {
-      "id": "spaghetti with local ramps",
-      "label": "spaghetti with local ramps",
-      "category": "vegetables"
-    },
-    {
-      "id": "spaghetti with mussels",
-      "label": "spaghetti with mussels",
-      "category": "seafood"
-    },
-    {
-      "id": "spaghettini with spicy artichokes",
-      "label": "spaghettini with spicy artichokes",
-      "category": "vegetables"
     },
     {
       "id": "spanish",
@@ -8396,8 +8276,8 @@
       "category": "oils_vinegars"
     },
     {
-      "id": "balsamic, aged vinegar",
-      "label": "balsamic, aged vinegar",
+      "id": "aged vinegar balsamic",
+      "label": "aged vinegar balsamic",
       "category": "oils_vinegars"
     },
     {
@@ -8721,133 +8601,53 @@
       "category": "vegetables"
     },
     {
-      "id": "with aged gruy\u00e8re",
-      "label": "with aged gruy\u00e8re",
+      "id": "aged gruy\u00e8re",
+      "label": "aged gruy\u00e8re",
       "category": "dairy_cheese"
     },
     {
-      "id": "with apples",
-      "label": "with apples",
-      "category": "fruits"
-    },
-    {
-      "id": "with black truffles",
-      "label": "with black truffles",
-      "category": "vegetables"
-    },
-    {
-      "id": "with cloves",
-      "label": "with cloves",
-      "category": "herbs_spices"
-    },
-    {
-      "id": "with corned beef brisket",
-      "label": "with corned beef brisket",
+      "id": "corned beef brisket",
+      "label": "corned beef brisket",
       "category": "meat_poultry"
     },
     {
-      "id": "with dark chocolate",
-      "label": "with dark chocolate",
-      "category": "sweets_desserts"
-    },
-    {
-      "id": "with fettuccine",
-      "label": "with fettuccine",
-      "category": "grains_starches"
-    },
-    {
-      "id": "with green",
-      "label": "with green",
-      "category": "other"
-    },
-    {
-      "id": "with green lentils",
-      "label": "with green lentils",
-      "category": "legumes"
-    },
-    {
-      "id": "with green papayas",
-      "label": "with green papayas",
+      "id": "green papayas",
+      "label": "green papayas",
       "category": "fruits"
     },
     {
-      "id": "with hazelnut",
-      "label": "with hazelnut",
-      "category": "nuts_seeds"
-    },
-    {
-      "id": "with its paprika",
-      "label": "with its paprika",
+      "id": "its paprika",
+      "label": "its paprika",
       "category": "herbs_spices"
     },
     {
-      "id": "with mexican oregano",
-      "label": "with mexican oregano",
-      "category": "cuisine"
-    },
-    {
-      "id": "with milk chocolate",
-      "label": "with milk chocolate",
-      "category": "dairy_cheese"
-    },
-    {
-      "id": "with mint",
-      "label": "with mint",
-      "category": "herbs_spices"
-    },
-    {
-      "id": "with mushrooms",
-      "label": "with mushrooms",
-      "category": "vegetables"
-    },
-    {
-      "id": "with octopus",
-      "label": "with octopus",
-      "category": "seafood"
-    },
-    {
-      "id": "with prosciutto di parma",
-      "label": "with prosciutto di parma",
+      "id": "prosciutto di parma",
+      "label": "prosciutto di parma",
       "category": "meat_poultry"
     },
     {
-      "id": "with red-eye gravy",
-      "label": "with red-eye gravy",
+      "id": "red-eye gravy",
+      "label": "red-eye gravy",
       "category": "other"
     },
     {
-      "id": "with seafood",
-      "label": "with seafood",
-      "category": "seafood"
-    },
-    {
-      "id": "with small pasta",
-      "label": "with small pasta",
+      "id": "small pasta",
+      "label": "small pasta",
       "category": "grains_starches"
     },
     {
-      "id": "with soft cheeses",
-      "label": "with soft cheeses",
+      "id": "soft cheeses",
+      "label": "soft cheeses",
       "category": "dairy_cheese"
     },
     {
-      "id": "with tart cherries",
-      "label": "with tart cherries",
+      "id": "tart cherries",
+      "label": "tart cherries",
       "category": "sweets_desserts"
     },
     {
-      "id": "with tropical fruits",
-      "label": "with tropical fruits",
-      "category": "other"
-    },
-    {
-      "id": "with white truffles",
-      "label": "with white truffles",
-      "category": "vegetables"
-    },
-    {
-      "id": "with young cheese",
-      "label": "with young cheese",
+      "id": "young cheese",
+      "label": "young cheese",
       "category": "dairy_cheese"
     },
     {
@@ -8859,11 +8659,6 @@
       "id": "worcestershire sauce",
       "label": "worcestershire sauce",
       "category": "sauces_condiments"
-    },
-    {
-      "id": "work well with sage",
-      "label": "work well with sage",
-      "category": "herbs_spices"
     },
     {
       "id": "wrap it in bacon",
@@ -9935,12 +9730,6 @@
       "recommendation_level": 1
     },
     {
-      "source": "beef",
-      "target": "mushrooms with potato boulang\u00e8re",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "barley",
       "target": "beef",
       "weight": 2,
@@ -10188,7 +9977,7 @@
     },
     {
       "source": "beef",
-      "target": "with corned beef brisket",
+      "target": "corned beef brisket",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -14478,12 +14267,6 @@
     },
     {
       "source": "garlic",
-      "target": "spaghetti with mussels",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "garlic",
       "target": "lamb",
       "weight": 2,
       "recommendation_level": 2
@@ -14706,9 +14489,9 @@
     },
     {
       "source": "garlic",
-      "target": "with mushrooms",
-      "weight": 1,
-      "recommendation_level": 1
+      "target": "mushrooms",
+      "weight": 3,
+      "recommendation_level": 3
     },
     {
       "source": "garlic",
@@ -16461,12 +16244,6 @@
       "target": "grape",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "garlic",
-      "target": "mushrooms",
-      "weight": 3,
-      "recommendation_level": 3
     },
     {
       "source": "celery root",
@@ -20562,12 +20339,6 @@
     },
     {
       "source": "almond",
-      "target": "peaches",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "almond",
       "target": "kirsch",
       "weight": 2,
       "recommendation_level": 2
@@ -23496,12 +23267,6 @@
     },
     {
       "source": "mint",
-      "target": "with mint",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "mint",
       "target": "walnut",
       "weight": 2,
       "recommendation_level": 2
@@ -24347,7 +24112,7 @@
       "recommendation_level": 2
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "yogurt",
       "weight": 1,
       "recommendation_level": 1
@@ -33060,12 +32825,6 @@
     },
     {
       "source": "carrot",
-      "target": "dried red",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "carrot",
       "target": "cashews",
       "weight": 1,
       "recommendation_level": 1
@@ -33594,7 +33353,7 @@
     },
     {
       "source": "cinnamon",
-      "target": "with dark chocolate",
+      "target": "dark chocolate",
       "weight": 4,
       "recommendation_level": 4
     },
@@ -33859,12 +33618,6 @@
     {
       "source": "cinnamon",
       "target": "oregano",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "cinnamon",
-      "target": "dark chocolate",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -38286,7 +38039,7 @@
     },
     {
       "source": "ham",
-      "target": "with prosciutto di parma",
+      "target": "prosciutto di parma",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -38391,12 +38144,6 @@
       "target": "navy beans",
       "weight": 2,
       "recommendation_level": 2
-    },
-    {
-      "source": "mace",
-      "target": "with cloves",
-      "weight": 1,
-      "recommendation_level": 1
     },
     {
       "source": "cherry pie",
@@ -41459,8 +41206,8 @@
       "recommendation_level": 1
     },
     {
-      "source": "nuts",
-      "target": "with milk chocolate",
+      "source": "milk chocolate",
+      "target": "nuts",
       "weight": 3,
       "recommendation_level": 3
     },
@@ -42345,12 +42092,6 @@
       "target": "pepper",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "pepper",
-      "target": "ricotta gnocchi with asparagus",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "clam",
@@ -50159,12 +49900,6 @@
       "recommendation_level": 1
     },
     {
-      "source": "dried red",
-      "target": "ricotta",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "goat\u2019s milk",
       "target": "ricotta",
       "weight": 1,
@@ -52074,12 +51809,6 @@
     },
     {
       "source": "cream",
-      "target": "pumpkin \u201clune\u201d with butter",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "cream",
       "target": "oxtails",
       "weight": 1,
       "recommendation_level": 1
@@ -52650,7 +52379,7 @@
     },
     {
       "source": "cream",
-      "target": "with red-eye gravy",
+      "target": "red-eye gravy",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -58146,12 +57875,6 @@
     },
     {
       "source": "olive oil",
-      "target": "with mint",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "olive oil",
       "target": "tapenade",
       "weight": 1,
       "recommendation_level": 1
@@ -58194,9 +57917,9 @@
     },
     {
       "source": "olive oil",
-      "target": "oysters",
-      "weight": 1,
-      "recommendation_level": 1
+      "target": "oyster",
+      "weight": 2,
+      "recommendation_level": 2
     },
     {
       "source": "chenin blanc",
@@ -58661,12 +58384,6 @@
       "recommendation_level": 1
     },
     {
-      "source": "olive oil",
-      "target": "oyster",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "cider",
       "target": "olive oil",
       "weight": 3,
@@ -58715,8 +58432,8 @@
       "recommendation_level": 2
     },
     {
-      "source": "olive oil",
-      "target": "with hazelnut",
+      "source": "hazelnut",
+      "target": "olive oil",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -58917,12 +58634,6 @@
       "target": "olive oil",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "olive oil",
-      "target": "raw porcini with arugula",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "olive oil",
@@ -64607,7 +64318,7 @@
       "recommendation_level": 2
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "walnut",
       "weight": 1,
       "recommendation_level": 1
@@ -66036,12 +65747,6 @@
     },
     {
       "source": "basil",
-      "target": "pasta with basil pesto",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "basil",
       "target": "hard-boiled egg",
       "weight": 1,
       "recommendation_level": 1
@@ -66409,12 +66114,6 @@
     {
       "source": "basil",
       "target": "black pepper",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "basil",
-      "target": "dried red",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -67997,12 +67696,6 @@
       "recommendation_level": 2
     },
     {
-      "source": "carrots",
-      "target": "celery",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "bok choy",
       "target": "celery",
       "weight": 1,
@@ -68107,12 +67800,6 @@
     {
       "source": "celery",
       "target": "trout",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "celery",
-      "target": "dried red",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -70638,7 +70325,7 @@
     },
     {
       "source": "lemon",
-      "target": "with mexican oregano",
+      "target": "mexican oregano",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -72636,12 +72323,6 @@
     },
     {
       "source": "pasta",
-      "target": "spaghetti primavera with prosciutto",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "pasta",
       "target": "ramps",
       "weight": 2,
       "recommendation_level": 2
@@ -72737,12 +72418,6 @@
       "recommendation_level": 2
     },
     {
-      "source": "farfalle with stridoli",
-      "target": "pasta",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "comt\u00e9",
       "target": "pasta",
       "weight": 3,
@@ -72809,8 +72484,8 @@
       "recommendation_level": 1
     },
     {
-      "source": "pasta",
-      "target": "with fettuccine",
+      "source": "fettuccine",
+      "target": "pasta",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -72823,12 +72498,6 @@
     {
       "source": "bacon",
       "target": "pasta",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "pasta",
-      "target": "spaghettini with spicy artichokes",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -72861,12 +72530,6 @@
       "target": "salmon",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "linguini with clams",
-      "target": "pasta",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "pasta",
@@ -73044,7 +72707,7 @@
     },
     {
       "source": "pasta",
-      "target": "with small pasta",
+      "target": "small pasta",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -73493,7 +73156,7 @@
       "recommendation_level": 1
     },
     {
-      "source": "almonds",
+      "source": "almond",
       "target": "juniper berries",
       "weight": 1,
       "recommendation_level": 1
@@ -75918,7 +75581,7 @@
     },
     {
       "source": "lychees",
-      "target": "scallops",
+      "target": "scallop",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -77311,12 +76974,6 @@
     {
       "source": "five-spice powder",
       "target": "szechuan pepper",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "five-spice powder",
-      "target": "pears with anise",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -79345,12 +79002,6 @@
     {
       "source": "soy sauce",
       "target": "tahini",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "soy sauce",
-      "target": "with seafood",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -82584,12 +82235,6 @@
     },
     {
       "source": "armagnac",
-      "target": "work well with sage",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "armagnac",
       "target": "bay leaf",
       "weight": 1,
       "recommendation_level": 1
@@ -82770,7 +82415,7 @@
     },
     {
       "source": "banana",
-      "target": "with dark chocolate",
+      "target": "dark chocolate",
       "weight": 3,
       "recommendation_level": 3
     },
@@ -84426,7 +84071,7 @@
     },
     {
       "source": "kirsch",
-      "target": "with tart cherries",
+      "target": "tart cherries",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -84773,7 +84418,7 @@
       "recommendation_level": 1
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "sauternes",
       "weight": 1,
       "recommendation_level": 1
@@ -85667,13 +85312,13 @@
       "recommendation_level": 2
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "sweet white",
       "weight": 3,
       "recommendation_level": 3
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "muscat",
       "weight": 1,
       "recommendation_level": 1
@@ -86067,12 +85712,6 @@
       "target": "artichokes",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "artichokes",
-      "target": "fettuccine with house-made pancetta",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "artichokes",
@@ -91403,12 +91042,6 @@
       "recommendation_level": 2
     },
     {
-      "source": "arugula salad with cucumber",
-      "target": "jerusalem artichoke",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
       "source": "jerusalem artichoke",
       "target": "poached quail",
       "weight": 2,
@@ -92057,8 +91690,8 @@
       "recommendation_level": 2
     },
     {
-      "source": "salmon",
-      "target": "with green lentils",
+      "source": "green lentils",
+      "target": "salmon",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -92877,12 +92510,6 @@
       "target": "liptauer",
       "weight": 2,
       "recommendation_level": 2
-    },
-    {
-      "source": "caraway seeds",
-      "target": "dried red",
-      "weight": 1,
-      "recommendation_level": 1
     },
     {
       "source": "caraway seeds",
@@ -94127,7 +93754,7 @@
       "recommendation_level": 1
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "riesling",
       "weight": 1,
       "recommendation_level": 1
@@ -95274,7 +94901,7 @@
     },
     {
       "source": "cilantro",
-      "target": "with its paprika",
+      "target": "its paprika",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -98730,12 +98357,6 @@
     },
     {
       "source": "flat-leaf parsley",
-      "target": "linguine with clams",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "flat-leaf parsley",
       "target": "sorrel",
       "weight": 1,
       "recommendation_level": 1
@@ -98841,12 +98462,6 @@
       "target": "succotash",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "flat-leaf parsley",
-      "target": "sauce with lime",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "balsamic",
@@ -99407,20 +99022,8 @@
       "recommendation_level": 1
     },
     {
-      "source": "dried red",
-      "target": "kidney beans",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
       "source": "fresh green",
       "target": "kidney beans",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "dried red",
-      "target": "halibut",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -99899,8 +99502,8 @@
       "recommendation_level": 1
     },
     {
-      "source": "wasabi",
-      "target": "with seafood",
+      "source": "seafood",
+      "target": "wasabi",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -100127,7 +99730,7 @@
       "recommendation_level": 1
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "cabernet sauvignon",
       "weight": 3,
       "recommendation_level": 3
@@ -101586,7 +101189,7 @@
     },
     {
       "source": "chardonnay",
-      "target": "with soft cheeses",
+      "target": "soft cheeses",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -101635,12 +101238,6 @@
     {
       "source": "brie",
       "target": "caponata",
-      "weight": 2,
-      "recommendation_level": 2
-    },
-    {
-      "source": "brie",
-      "target": "bruschetta with burrata cheese",
       "weight": 2,
       "recommendation_level": 2
     },
@@ -101976,13 +101573,13 @@
     },
     {
       "source": "gouda",
-      "target": "with young cheese",
+      "target": "young cheese",
       "weight": 1,
       "recommendation_level": 1
     },
     {
-      "source": "gruy\u00e8re",
-      "target": "with aged gruy\u00e8re",
+      "source": "aged gruy\u00e8re",
+      "target": "gruy\u00e8re",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -102437,16 +102034,10 @@
       "recommendation_level": 1
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "vin santo",
       "weight": 1,
       "recommendation_level": 1
-    },
-    {
-      "source": "spaghetti with local ramps",
-      "target": "white chocolate",
-      "weight": 2,
-      "recommendation_level": 2
     },
     {
       "source": "blackberries",
@@ -103043,26 +102634,20 @@
       "recommendation_level": 1
     },
     {
-      "source": "papayas",
-      "target": "with green papaya",
+      "source": "green papaya",
+      "target": "papayas",
       "weight": 1,
       "recommendation_level": 1
     },
     {
-      "source": "papayas",
-      "target": "with green papayas",
+      "source": "green papayas",
+      "target": "papayas",
       "weight": 1,
       "recommendation_level": 1
     },
     {
       "source": "citrus fruits",
       "target": "papayas",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
-      "source": "papayas",
-      "target": "with green",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -103464,7 +103049,7 @@
     },
     {
       "source": "macadamia nut oil",
-      "target": "with tropical fruits",
+      "target": "tropical fruits",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -103601,7 +103186,7 @@
       "recommendation_level": 3
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "zabaglione",
       "weight": 1,
       "recommendation_level": 1
@@ -103721,13 +103306,13 @@
       "recommendation_level": 1
     },
     {
-      "source": "bananas",
+      "source": "banana",
       "target": "green plantain",
       "weight": 2,
       "recommendation_level": 2
     },
     {
-      "source": "bananas",
+      "source": "banana",
       "target": "sweet plantains",
       "weight": 2,
       "recommendation_level": 2
@@ -103793,7 +103378,7 @@
       "recommendation_level": 1
     },
     {
-      "source": "almonds",
+      "source": "almond",
       "target": "white rice",
       "weight": 1,
       "recommendation_level": 1
@@ -103823,8 +103408,8 @@
       "recommendation_level": 1
     },
     {
-      "source": "wild rice",
-      "target": "with octopus",
+      "source": "octopus",
+      "target": "wild rice",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -103997,19 +103582,19 @@
       "recommendation_level": 2
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "moscato",
       "weight": 3,
       "recommendation_level": 3
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "d\u2019asti",
       "weight": 1,
       "recommendation_level": 1
     },
     {
-      "source": "balsamic, aged vinegar",
+      "source": "aged vinegar balsamic",
       "target": "beaujolais",
       "weight": 3,
       "recommendation_level": 3
@@ -104045,14 +103630,14 @@
       "recommendation_level": 1
     },
     {
-      "source": "pacific northwest truffle",
-      "target": "with black truffles",
+      "source": "black truffles",
+      "target": "pacific northwest truffle",
       "weight": 1,
       "recommendation_level": 1
     },
     {
       "source": "pacific northwest truffle",
-      "target": "with white truffles",
+      "target": "white truffles",
       "weight": 1,
       "recommendation_level": 1
     },
@@ -104147,12 +103732,6 @@
       "recommendation_level": 1
     },
     {
-      "source": "sherry vinegar",
-      "target": "with apples",
-      "weight": 1,
-      "recommendation_level": 1
-    },
-    {
       "source": "burrata",
       "target": "sherry vinegar",
       "weight": 2,
@@ -104191,8 +103770,8 @@
   ],
   "metadata": {
     "source": "The Flavor Bible (Dornenburg & Page, 2008)",
-    "total_nodes": 1798,
-    "total_edges": 15866,
+    "total_nodes": 1757,
+    "total_edges": 15830,
     "affinity_edges": 4634,
     "recommendation_levels": {
       "1": "regular (suggested by one or more experts)",
@@ -104273,21 +103852,21 @@
       }
     ],
     "category_counts": {
-      "grains_starches": 68,
-      "herbs_spices": 166,
-      "vegetables": 254,
-      "dairy_cheese": 136,
+      "grains_starches": 67,
+      "herbs_spices": 162,
+      "vegetables": 243,
+      "dairy_cheese": 132,
       "sauces_condiments": 60,
-      "other": 379,
-      "nuts_seeds": 43,
-      "fruits": 151,
+      "other": 375,
+      "nuts_seeds": 41,
+      "fruits": 148,
       "beverages": 107,
-      "cuisine": 42,
-      "seafood": 102,
-      "meat_poultry": 116,
+      "cuisine": 41,
+      "seafood": 95,
+      "meat_poultry": 114,
       "techniques_dishes": 50,
-      "legumes": 27,
-      "sweets_desserts": 75,
+      "legumes": 26,
+      "sweets_desserts": 74,
       "oils_vinegars": 22
     }
   }

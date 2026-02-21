@@ -156,7 +156,6 @@ beef,spice rub,1
 beef,capers,1
 beef,vinegar,2
 beef,lime,1
-beef,mushrooms with potato boulangère,2
 barley,beef,2
 asiago,beef,1
 beef,coriander,2
@@ -198,7 +197,7 @@ beef,chervil,1
 beef,polenta,1
 beef,caviar,1
 beef,indian,1
-beef,with corned beef brisket,2
+beef,corned beef brisket,2
 beef,rice,2
 beef,radicchio,1
 beef,coffee,1
@@ -913,7 +912,6 @@ garlic,passion fruit,1
 garlic,ham,2
 celery,garlic,2
 anise,garlic,1
-garlic,spaghetti with mussels,2
 garlic,lamb,2
 fennel seeds,garlic,2
 butter,garlic,2
@@ -951,7 +949,7 @@ garlic,gremolata,1
 garlic,wine,2
 garlic,shellfish,3
 garlic,pork,2
-garlic,with mushrooms,1
+garlic,mushrooms,3
 garlic,kidney beans,2
 chervil,garlic,2
 garlic,miso,2
@@ -1244,7 +1242,6 @@ chili powder,garlic,1
 fennel,garlic,2
 bell pepper,garlic,2
 garlic,grape,1
-garlic,mushrooms,3
 celery root,garlic,2
 garlic,spread them out,1
 garlic,parsley,3
@@ -1927,7 +1924,6 @@ almond,cashews,1
 almond,goat’s milk,2
 almond,rogue river oregonzola,2
 almond,tamarind,1
-almond,peaches,2
 almond,kirsch,2
 almond,bacon,1
 almond,coconut,2
@@ -2416,7 +2412,6 @@ lima beans,mint,1
 mackerel,mint,1
 custard,mint,2
 mint,tomato,2
-mint,with mint,2
 mint,walnut,2
 feta cheese,mint,2
 mint,pomegranate,2
@@ -2558,7 +2553,7 @@ lemon juice,yogurt,1
 apricot,yogurt,2
 ham hocks,yogurt,1
 grapefruit,yogurt,2
-balsamic, aged vinegar,yogurt,1
+aged vinegar balsamic,yogurt,1
 pistachios,yogurt,2
 carrot,yogurt,2
 green plantain,yogurt,1
@@ -4010,7 +4005,6 @@ carrot,tarragon,2
 carrot,maple syrup,2
 basil,carrot,1
 carrot,trout,1
-carrot,dried red,2
 carrot,cashews,1
 anise hyssop,carrot,2
 bay leaf,carrot,2
@@ -4099,7 +4093,7 @@ cinnamon,crème fraîche,2
 cinnamon,fenugreek,1
 cinnamon,dill,1
 cinnamon,tea,2
-cinnamon,with dark chocolate,4
+cinnamon,dark chocolate,4
 cinnamon,salads,1
 cinnamon,grape,2
 cinnamon,ras el hanout,2
@@ -4144,7 +4138,6 @@ cinnamon,dijon,1
 cinnamon,lemongrass,1
 cinnamon,green plantain,1
 cinnamon,oregano,2
-cinnamon,dark chocolate,2
 cinnamon,cranberries,2
 cinnamon,star anise,2
 cinnamon,rose,2
@@ -4881,7 +4874,7 @@ ham,pine nuts,1
 ham,jack cheese,2
 catfish,ham,1
 ham,mozzarella cheese,2
-ham,with prosciutto di parma,1
+ham,prosciutto di parma,1
 comté,ham,1
 ham,riesling,1
 ham,pepper,1
@@ -4899,7 +4892,6 @@ ketchup,lemon,2
 horseradish,ketchup,2
 cream,ketchup,1
 ketchup,navy beans,2
-mace,with cloves,1
 cherry pie,mace,1
 five-spice powder,mace,1
 hazelnuts,mace,1
@@ -5410,7 +5402,7 @@ fennel pollen,nuts,1
 nuts,vanilla,2
 ice cream,nuts,1
 nuts,pine nuts,1
-nuts,with milk chocolate,3
+milk chocolate,nuts,3
 brown butter,nuts,2
 nuts,tequila,1
 nuts,phyllo dough,2
@@ -5558,7 +5550,6 @@ pepper,pernod,2
 pepper,ricotta,2
 pepper,rice wine,3
 feta,pepper,1
-pepper,ricotta gnocchi with asparagus,2
 clam,pepper,2
 pepper,stock,1
 pepper,soy sauce,2
@@ -6860,7 +6851,6 @@ basil,ricotta,1
 piquancy,ricotta,2
 armagnac,ricotta,1
 curry leaf,ricotta,1
-dried red,ricotta,2
 goat’s milk,ricotta,1
 cream,ricotta,1
 chervil,ricotta,1
@@ -7179,7 +7169,6 @@ cream,wild sweets,1
 cream,horseradish,2
 cream,tía maria,1
 cream,dill,2
-cream,pumpkin “lune” with butter,2
 cream,oxtails,1
 cream,saffron,2
 cream,sweetened condensed,1
@@ -7275,7 +7264,7 @@ clam,cream,2
 cream,radishes,1
 cream,potato,2
 cilantro,cream,2
-cream,with red-eye gravy,1
+cream,red-eye gravy,1
 cream,vodka,2
 cream,prosciutto,2
 cream,meyer lemon,1
@@ -8191,7 +8180,6 @@ grapefruit,olive oil,1
 olive oil,wild rice,1
 olive oil,sesame oil,1
 olive oil,squab,1
-olive oil,with mint,1
 olive oil,tapenade,1
 burrata,olive oil,1
 olive oil,pomegranate,1
@@ -8199,7 +8187,7 @@ mango,olive oil,1
 halibut,olive oil,2
 grouper,olive oil,2
 olive oil,port,1
-olive oil,oysters,1
+olive oil,oyster,2
 chenin blanc,olive oil,1
 grenache,olive oil,1
 chicken liver,olive oil,1
@@ -8277,7 +8265,6 @@ chicken stock,olive oil,2
 bulgur wheat,olive oil,2
 olive oil,white wine vinegar,1
 bluefish,olive oil,1
-olive oil,oyster,2
 cider,olive oil,3
 olive oil,radishes,1
 olive oil,potato,2
@@ -8286,7 +8273,7 @@ mustard greens,olive oil,2
 olive oil,raspberry,3
 olive oil,pernod,2
 olive oil,ricotta,2
-olive oil,with hazelnut,2
+hazelnut,olive oil,2
 feta,olive oil,1
 lamb chops,olive oil,1
 olive oil,serrano chile pepper,1
@@ -8320,7 +8307,6 @@ mustard green,olive oil,1
 olive oil,sage,2
 olive oil,salami,1
 gorgonzola,olive oil,1
-olive oil,raw porcini with arugula,2
 olive oil,scallions,2
 eggs,olive oil,2
 lima beans,olive oil,1
@@ -9268,7 +9254,7 @@ savoy cabbage,walnut,1
 grapefruit,walnut,1
 walnut,wild rice,2
 sweetbreads,walnut,2
-balsamic, aged vinegar,walnut,1
+aged vinegar balsamic,walnut,1
 walnut,watercress,3
 cabernet sauvignon,walnut,3
 sage,walnut,2
@@ -9506,7 +9492,6 @@ avocado,basil,2
 basil,unsalted,3
 basil,lemon thyme,1
 asparagus,basil,1
-basil,pasta with basil pesto,2
 basil,hard-boiled egg,1
 basil,sorrel,1
 basil,lemon,2
@@ -9569,7 +9554,6 @@ basil,tarragon,2
 basil,salt,2
 basil,piquancy,1
 basil,black pepper,1
-basil,dried red,1
 basil,cured salmon,1
 basil,curry,2
 basil,goat’s milk,2
@@ -9833,7 +9817,6 @@ celery,crispy shallots,2
 celery,gruyère,2
 celery,shallots,1
 celery,cod,2
-carrots,celery,2
 bok choy,celery,1
 celery,juniper berries,1
 celery,sea bass,1
@@ -9852,7 +9835,6 @@ celery,grouper,1
 black bass,celery,1
 celery,tarragon,2
 celery,trout,1
-celery,dried red,1
 celery,curry,1
 bay leaf,celery,1
 celery,leeks,1
@@ -10273,7 +10255,7 @@ date,lemon,1
 berry,lemon,2
 lemon,lettuces,2
 lemon,sour cream,2
-lemon,with mexican oregano,1
+lemon,mexican oregano,1
 avocados,lemon,1
 lemon,okra,3
 avocado,lemon,2
@@ -10606,7 +10588,6 @@ pasta,truffles,2
 asparagus,pasta,1
 flat-leaf parsley,pasta,1
 emmental,pasta,3
-pasta,spaghetti primavera with prosciutto,2
 pasta,ramps,2
 pancetta,pasta,2
 gruyère,pasta,3
@@ -10623,7 +10604,6 @@ pasta,pistachios,1
 pasta,sage,2
 gorgonzola,pasta,3
 pasta,sardines,2
-farfalle with stridoli,pasta,2
 comté,pasta,3
 pasta,pecorino,3
 pasta,red onion,1
@@ -10635,16 +10615,14 @@ marjoram,pasta,2
 fennel seeds,pasta,2
 butter,pasta,2
 leeks,pasta,1
-pasta,with fettuccine,2
+fettuccine,pasta,2
 pasta,venison,2
 bacon,pasta,2
-pasta,spaghettini with spicy artichokes,2
 pasta,sausage,2
 pasta,vinegar,2
 pasta,spring garlic,2
 broccoli,pasta,1
 pasta,salmon,1
-linguini with clams,pasta,2
 pasta,red pepper flakes,2
 pasta,wild mushrooms,2
 pasta,steamed fish,1
@@ -10674,7 +10652,7 @@ pasta,veal shanks,2
 pasta,radicchio,1
 festonate,pasta,2
 arugula,pasta,1
-pasta,with small pasta,1
+pasta,small pasta,1
 cheddar,pasta,3
 fennel pollen,pasta,1
 pasta,pizza,1
@@ -10749,7 +10727,7 @@ champagne vinegar,juniper berries,1
 frankfurter,juniper berries,3
 juniper berries,shallots,1
 juniper berries,white wine,1
-almonds,juniper berries,1
+almond,juniper berries,1
 juniper berries,tamari,1
 broccoli rabe,juniper berries,1
 juniper berries,kosher,1
@@ -11153,7 +11131,7 @@ lime,lychees,2
 lychees,rose,2
 kiwi fruit,lychees,1
 lime juice,lychees,1
-lychees,scallops,1
+lychees,scallop,1
 lychees,sake,1
 foie gras,lychees,1
 lychees,mango,1
@@ -11386,7 +11364,6 @@ five-spice powder,steamed fish,1
 five-spice powder,kumquats,1
 five-spice powder,mango,1
 five-spice powder,szechuan pepper,1
-five-spice powder,pears with anise,1
 five-spice powder,tropical,1
 five-spice powder,poached,2
 five-spice powder,maple syrup,1
@@ -11725,7 +11702,6 @@ rice wine,soy sauce,3
 soy sauce,stock,1
 mexican salsa,soy sauce,1
 soy sauce,tahini,1
-soy sauce,with seafood,1
 sake,soy sauce,2
 catfish,soy sauce,1
 soy sauce,verbena,1
@@ -12264,7 +12240,6 @@ dry white,turkey,1
 dry white,shallots,3
 dry white,lemon juice,2
 dry white,jerusalem artichoke,1
-armagnac,work well with sage,1
 armagnac,bay leaf,1
 armagnac,bacon,1
 armagnac,cheese,1
@@ -12295,7 +12270,7 @@ port wine,red cabbage,2
 blue cheese,red cabbage,2
 duck fat,red cabbage,2
 apricot brandy,gin,1
-banana,with dark chocolate,3
+banana,dark chocolate,3
 banana,boar,1
 banana,white sesame seed,1
 banana,unsalted,2
@@ -12571,7 +12546,7 @@ kirsch,pâté,1
 grand marnier,kirsch,2
 kirsch,melon/ muskmelons,1
 kirsch,papaya,1
-kirsch,with tart cherries,1
+kirsch,tart cherries,1
 curaçao,kirsch,2
 kirsch,ruby,1
 lemon juice,lemon verbena,1
@@ -12629,7 +12604,7 @@ risotto,saffron,2
 kosher,saffron,3
 saffron,scallop,2
 prosciutto,sauternes,1
-balsamic, aged vinegar,sauternes,1
+aged vinegar balsamic,sauternes,1
 roquefort,sauternes,2
 apricot,green tea,2
 stocks,vinegar,1
@@ -12778,8 +12753,8 @@ brown sugar,wine,1
 trout,wine,1
 jerusalem artichoke,wine,1
 caviar,wine,2
-balsamic, aged vinegar,sweet white,3
-balsamic, aged vinegar,muscat,1
+aged vinegar balsamic,sweet white,3
+aged vinegar balsamic,muscat,1
 herbs,polenta,1
 herbs,lemon juice,1
 goat cheese,herbs,2
@@ -12845,7 +12820,6 @@ artichokes,white wine vinegar,1
 artichokes,red pepper flakes,1
 artichokes,clam,1
 aioli,artichokes,1
-artichokes,fettuccine with house-made pancetta,2
 artichokes,prosciutto,2
 artichokes,sole,1
 artichokes,arugula,1
@@ -13734,7 +13708,6 @@ jerusalem artichoke,“sockeye” salmon tartare,2
 egg,jerusalem artichoke,2
 fennel leaves,jerusalem artichoke,1
 jerusalem artichoke,morels,2
-arugula salad with cucumber,jerusalem artichoke,2
 jerusalem artichoke,poached quail,2
 jerusalem artichoke,jerusalem artichoke soup,2
 fennel seeds,jerusalem artichoke,1
@@ -13843,7 +13816,7 @@ avocado,salmon,2
 hard-boiled egg,salmon,1
 japanese salt,salmon,1
 salmon,sorrel,2
-salmon,with green lentils,2
+green lentils,salmon,2
 rice wine vinegar,salmon,1
 bok choy,salmon,1
 dijon mustard,salmon,2
@@ -13980,7 +13953,6 @@ caraway seeds,goose,1
 caraway seeds,mackerel,1
 caraway seeds,coleslaw,1
 caraway seeds,liptauer,2
-caraway seeds,dried red,1
 caraway seeds,rutabagas,1
 broccoli,caraway seeds,1
 beef stew,caraway seeds,1
@@ -14188,7 +14160,7 @@ porcini,sea bass,3
 flat-leaf parsley,romesco,2
 milder,riesling,1
 riesling,smoked,1
-balsamic, aged vinegar,riesling,1
+aged vinegar balsamic,riesling,1
 riesling,seafood,1
 public,riesling,1
 red onion,riesling,1
@@ -14379,7 +14351,7 @@ cilantro,curry,1
 cilantro,tamarind,1
 cilantro,cornichons,1
 cilantro,gin,2
-cilantro,with its paprika,2
+cilantro,its paprika,2
 cilantro,papayas,1
 cilantro,dark chocolate,1
 cilantro,milk chocolate,1
@@ -14955,7 +14927,6 @@ epazote,pinto beans,1
 macadamia nut oil,olive,3
 flat-leaf parsley,public,1
 flat-leaf parsley,onion jam,2
-flat-leaf parsley,linguine with clams,2
 flat-leaf parsley,sorrel,1
 flat-leaf parsley,garlic mashed,2
 flat-leaf parsley,italian sausage,2
@@ -14974,7 +14945,6 @@ bomba,flat-leaf parsley,1
 flat-leaf parsley,rice wine,3
 flat-leaf parsley,polenta,1
 flat-leaf parsley,succotash,1
-flat-leaf parsley,sauce with lime,2
 balsamic,flat-leaf parsley,3
 flat-leaf parsley,steak,1
 flat-leaf parsley,swiss chard,2
@@ -15068,9 +15038,7 @@ black sesame seed,rice wine,1
 rice wine,sesame oil,2
 chili,kidney beans,1
 garam masala,kidney beans,1
-dried red,kidney beans,1
 fresh green,kidney beans,1
-dried red,halibut,1
 fresh green,halibut,1
 anaheim chile pepper,chili,2
 cayenne,chili,1
@@ -15150,7 +15118,7 @@ truffle oil,t’afia,1
 porcini mushrooms,thyme,2
 flageolets,porcini mushrooms,1
 flageolets,mirepoix,1
-wasabi,with seafood,2
+seafood,wasabi,2
 piquancy,wasabi,1
 rice wine vinegar,wasabi,1
 shiso leaf,wasabi,1
@@ -15188,7 +15156,7 @@ chardonnay,thyme,3
 boysenberries,dry red,1
 chicken liver,dry red,1
 dry red,lamb chops,1
-balsamic, aged vinegar,cabernet sauvignon,3
+aged vinegar balsamic,cabernet sauvignon,3
 fruity,hazelnut oil,2
 celery seed,worcestershire sauce,1
 brown sugar,worcestershire sauce,1
@@ -15431,7 +15399,7 @@ black olives,halibut,2
 black beans,fontina,1
 chardonnay,medjool,1
 avocado oil,chardonnay,1
-chardonnay,with soft cheeses,1
+chardonnay,soft cheeses,1
 asiago,high-fiber fruits,1
 asiago,zamorano,1
 asiago,roncal,1
@@ -15440,7 +15408,6 @@ asiago,spenwood,1
 romaine lettuce,stilton,3
 brie,french,1
 brie,caponata,2
-brie,bruschetta with burrata cheese,2
 burrata,vincotto,1
 sherry vinegar,vincotto,3
 baby greens,camembert,1
@@ -15496,8 +15463,8 @@ chestnut,gorgonzola,2
 chestnut,parmesan,1
 chestnut,ricotta,3
 chestnut,pecorino,2
-gouda,with young cheese,1
-gruyère,with aged gruyère,1
+gouda,young cheese,1
+aged gruyère,gruyère,1
 gruyère,soufflés,1
 fondues,gruyère,1
 jack,mahon,3
@@ -15573,8 +15540,7 @@ milk chocolate,mole sauces,1
 mole sauces,white sesame seed,1
 dark chocolate,rice krispies,1
 milk chocolate,rice krispies,1
-balsamic, aged vinegar,vin santo,1
-spaghetti with local ramps,white chocolate,2
+aged vinegar balsamic,vin santo,1
 blackberries,white chocolate,3
 crème de cacao,white chocolate,1
 green lentils,white chocolate,2
@@ -15674,10 +15640,9 @@ papayas,rice vinegar,1
 papayas,smoothies,1
 jalapeño,papayas,2
 papayas,sorbet,1
-papayas,with green papaya,1
-papayas,with green papayas,1
+green papaya,papayas,1
+green papayas,papayas,1
 citrus fruits,papayas,1
-papayas,with green,1
 pastas,truffle salt,1
 earl grey tea,tamarind syrup,2
 earl grey tea,scotch,2
@@ -15744,7 +15709,7 @@ avocado oil,chardonnay vinegar,2
 avocado oil,tomato water,2
 chardonnay vinegar,tomato water,2
 macadamia nut oil,rice salads,1
-macadamia nut oil,with tropical fruits,1
+macadamia nut oil,tropical fruits,1
 fruit salads,macadamia nut oil,1
 fruit salads,fruit vinegar,1
 fruit salads,sesame oil,1
@@ -15767,7 +15732,7 @@ rainy,smoked paprika,1
 mix our paprikas together,smoked paprika,1
 palm sugar,sugar snap peas,3
 piquancy,pistachio,3
-balsamic, aged vinegar,zabaglione,1
+aged vinegar balsamic,zabaglione,1
 dark chocolate,white radishes,1
 milk chocolate,white radishes,1
 dark chocolate,grape jelly,1
@@ -15787,8 +15752,8 @@ peppadew pepper,peppadew peppers,2
 half an onion,spanish pepper,2
 chorizero pepper pulp,spanish pepper,1
 in salsa vizcaina,spanish pepper,1
-bananas,green plantain,2
-bananas,sweet plantains,2
+banana,green plantain,2
+banana,sweet plantains,2
 sweet plantains,toffee,1
 white truffle oil,whole grain mustard,2
 pickled ginger,pomelo,2
@@ -15799,12 +15764,12 @@ chipotle peppers,pork shoulder,2
 bay leaves,pork shoulder,2
 plantains,pork shoulder,2
 basmati rice,bay leaves,1
-almonds,white rice,1
+almond,white rice,1
 arborio,basmati rice,3
 saffron risotto,wild rice,1
 wash greens,wild rice,1
 making a seafood risotto,wild rice,1
-wild rice,with octopus,1
+octopus,wild rice,1
 we mainly ate risotto,wild rice,1
 brown sugar,tropical fruits,1
 coconut water,tropical fruits,2
@@ -15833,16 +15798,16 @@ other goat cheese,sourness,1
 goat’s,sourness,1
 red wine vinegar,salad,2
 kabocha squash,sweet curry,2
-balsamic, aged vinegar,moscato,3
-balsamic, aged vinegar,d’asti,1
-balsamic, aged vinegar,beaujolais,3
+aged vinegar balsamic,moscato,3
+aged vinegar balsamic,d’asti,1
+aged vinegar balsamic,beaujolais,3
 grilled fish,pomegrantes,1
 black truffle,langoustines,1
 smoked trout,walnut oil,1
 roasted red,smoked trout,2
 fruit vinegar,walnut oil,1
-pacific northwest truffle,with black truffles,1
-pacific northwest truffle,with white truffles,1
+black truffles,pacific northwest truffle,1
+pacific northwest truffle,white truffles,1
 melted,pacific northwest truffle,1
 banyuls vinegar,ivory,1
 cabernet sauvignon vinegar,cooking process,1
@@ -15858,7 +15823,6 @@ oils,red wine vinegar,2
 peanut,rice wine vinegar,2
 sherry vinegar,tortilla,1
 iceberg,sherry vinegar,1
-sherry vinegar,with apples,1
 burrata,sherry vinegar,2
 sunflower,white wine vinegar,1
 safflower,white wine vinegar,1

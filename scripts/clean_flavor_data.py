@@ -218,6 +218,10 @@ def should_remove(node_id: str) -> bool:
     if lower.endswith(" cuisine") or lower.endswith(" cuisines"):
         return True
 
+    # "X with Y" - dish description, not single ingredient (keep "with X" for normalize)
+    if " with " in lower and not lower.startswith("with "):
+        return True
+
     # Sentence-like (contains "we ", "who ", "as they ", etc.)
     if re.search(r"\b(we|who|as they|it is|that is)\s+(also|are|make|loved)", lower):
         return True
