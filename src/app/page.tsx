@@ -78,6 +78,7 @@ export default function HomePage() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [affinity, setAffinity] = useState(0);
 
   useEffect(() => {
     fetch("/api/graph-data")
@@ -99,11 +100,6 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const pairings = useMemo(() => {
-    if (!selectedNode || !graphData) return [];
-    return getPairings(selectedNode.id, graphData.links, graphData.nodes);
-  }, [selectedNode, graphData]);
-
   const { nodeDegrees, maxDegree } = useMemo(() => {
     const degrees = new Map<string, number>();
     if (!graphData) return { nodeDegrees: degrees, maxDegree: 1 };
@@ -122,6 +118,53 @@ export default function HomePage() {
     const max = Math.max(1, ...degrees.values());
     return { nodeDegrees: degrees, maxDegree: max };
   }, [graphData]);
+
+  const graphDataFiltered = useMemo(() => {
+    if (!graphData) return { nodes: [], links: [] };
+    const minDegree = (affinity / 100) * maxDegree;
+    const links = graphData.links.filter((link) => {
+      const src =
+        typeof link.source === "string"
+          ? link.source
+          : (link.source as { id?: string })?.id ?? "";
+      const tgt =
+        typeof link.target === "string"
+          ? link.target
+          : (link.target as { id?: string })?.id ?? "";
+      const d1 = nodeDegrees.get(src) ?? 0;
+      const d2 = nodeDegrees.get(tgt) ?? 0;
+      return d1 >= minDegree && d2 >= minDegree;
+    });
+    return { nodes: graphData.nodes, links };
+  }, [graphData, affinity, maxDegree, nodeDegrees]);
+
+  const { nodeDegrees: nodeDegreesFiltered, maxDegree: maxDegreeFiltered } =
+    useMemo(() => {
+      const degrees = new Map<string, number>();
+      for (const link of graphDataFiltered.links) {
+        const src =
+          typeof link.source === "string"
+            ? link.source
+            : (link.source as { id?: string })?.id ?? "";
+        const tgt =
+          typeof link.target === "string"
+            ? link.target
+            : (link.target as { id?: string })?.id ?? "";
+        degrees.set(src, (degrees.get(src) ?? 0) + 1);
+        degrees.set(tgt, (degrees.get(tgt) ?? 0) + 1);
+      }
+      const max = Math.max(1, ...degrees.values());
+      return { nodeDegrees: degrees, maxDegree: max };
+    }, [graphDataFiltered]);
+
+  const pairings = useMemo(() => {
+    if (!selectedNode || !graphDataFiltered.nodes.length) return [];
+    return getPairings(
+      selectedNode.id,
+      graphDataFiltered.links,
+      graphDataFiltered.nodes,
+    );
+  }, [selectedNode, graphDataFiltered]);
 
   useEffect(() => {
     if (!graphData) return;
@@ -153,18 +196,18 @@ export default function HomePage() {
         y?: number;
       } | null,
     ) => {
-      if (!node || !graphData) {
+      if (!node || !graphDataFiltered.nodes.length) {
         setSelectedNode(null);
         return;
       }
-      const graphNode = graphData.nodes.find(
+      const graphNode = graphDataFiltered.nodes.find(
         (n) => n.id === String(node.id) || n.name === node.name,
       );
       if (graphNode) {
         setSelectedNode(graphNode);
       }
     },
-    [graphData],
+    [graphDataFiltered],
   );
 
   const nodeColorFn = useCallback(
@@ -186,10 +229,10 @@ export default function HomePage() {
       const n = node as GraphNode;
       const isSelected = selectedNode && n.id === selectedNode.id;
       if (isSelected) return 20;
-      const degree = nodeDegrees.get(n.id ?? "") ?? 0;
-      return 6 + 18 * (degree / maxDegree);
+      const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
+      return 6 + 18 * (degree / maxDegreeFiltered);
     },
-    [selectedNode, nodeDegrees, maxDegree],
+    [selectedNode, nodeDegreesFiltered, maxDegreeFiltered],
   );
 
   const linkVisibilityFn = useCallback(
@@ -245,10 +288,13 @@ export default function HomePage() {
     [selectedNode],
   );
 
-  const graphDataStable = useMemo(() => graphData!, [graphData]);
+  const graphDataStable = useMemo(
+    () => graphDataFiltered,
+    [graphDataFiltered],
+  );
 
   useEffect(() => {
-    if (!graphData) return;
+    if (!graphDataFiltered.nodes.length) return;
     const id = setTimeout(() => {
       const fg = graphRef.current;
       if (!fg) return;
@@ -259,9 +305,9 @@ export default function HomePage() {
       if (charge?.strength) {
         charge.strength((node: unknown) => {
           const n = node as { id?: string };
-          const degree = nodeDegrees.get(n.id ?? "") ?? 0;
-          const base = -80;
-          const extra = -200 * (degree / maxDegree);
+          const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
+          const base = -20;
+          const extra = -60 * (degree / maxDegreeFiltered);
           return base + extra;
         });
       }
@@ -269,7 +315,7 @@ export default function HomePage() {
         distance?: (v: number) => unknown;
         strength?: (v: number | ((l: unknown, i: number, links: unknown[]) => number)) => unknown;
       };
-      if (link?.distance) link.distance(100);
+      if (link?.distance) link.distance(40);
       if (link?.strength) {
         link.strength((l: unknown) => {
           const linkObj = l as { source?: { id?: string } | string; target?: { id?: string } | string };
@@ -281,21 +327,22 @@ export default function HomePage() {
             typeof linkObj.target === "string"
               ? linkObj.target
               : linkObj.target?.id ?? "";
-          const d1 = nodeDegrees.get(srcId) ?? 0;
-          const d2 = nodeDegrees.get(tgtId) ?? 0;
+          const d1 = nodeDegreesFiltered.get(srcId) ?? 0;
+          const d2 = nodeDegreesFiltered.get(tgtId) ?? 0;
           const avgDegree = (d1 + d2) / 2;
-          const ratio = avgDegree / maxDegree;
-          return 0.03 + 0.92 * Math.pow(ratio, 1.5);
+          const ratio = avgDegree / maxDegreeFiltered;
+          return 0.85 + 0.15 * Math.pow(ratio, 1.2);
         });
       }
       fg.d3ReheatSimulation?.();
     }, 0);
     return () => clearTimeout(id);
-  }, [graphData, nodeDegrees, maxDegree]);
+  }, [graphDataFiltered, nodeDegreesFiltered, maxDegreeFiltered]);
 
   useEffect(() => {
-    if (!selectedNode || !graphRef.current || !graphData) return;
-    const node = graphData.nodes.find((n) => n.id === selectedNode.id);
+    if (!selectedNode || !graphRef.current || !graphDataFiltered.nodes.length)
+      return;
+    const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
     const n = (node ?? selectedNode) as { x?: number; y?: number };
     if (typeof n.x !== "number" || typeof n.y !== "number") return;
     const fg = graphRef.current;
@@ -305,15 +352,15 @@ export default function HomePage() {
       400,
     );
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
-  }, [selectedNode, graphData]);
+  }, [selectedNode, graphDataFiltered]);
 
   const searchResults = useMemo(() => {
-    if (!graphData || !searchQuery.trim()) return [];
+    if (!graphDataFiltered.nodes.length || !searchQuery.trim()) return [];
     const q = searchQuery.trim().toLowerCase();
-    return graphData.nodes
+    return graphDataFiltered.nodes
       .filter((n) => n.name.toLowerCase().includes(q))
       .slice(0, 10);
-  }, [graphData, searchQuery]);
+  }, [graphDataFiltered, searchQuery]);
 
   if (loading) {
     return (
@@ -341,6 +388,23 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
+      <div className='absolute top-4 right-4 z-10 w-56'>
+        <label className='block text-xs font-medium text-gray-600 mb-1.5'>
+          Affinity (min connections)
+        </label>
+        <input
+          type='range'
+          min={0}
+          max={100}
+          value={affinity}
+          onChange={(e) => setAffinity(Number(e.target.value))}
+          className='w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-200 accent-primary'
+        />
+        <p className='text-xs text-gray-500 mt-1'>
+          {affinity}% — showing links between ingredients with ≥{" "}
+          {Math.ceil((affinity / 100) * maxDegree)} connections
+        </p>
+      </div>
       <div className='absolute top-4 left-4 z-10 w-72'>
         <input
           type='text'
@@ -394,9 +458,9 @@ export default function HomePage() {
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={() => setSelectedNode(null)}
-            cooldownTicks={300}
-            d3AlphaDecay={0.02}
-            d3VelocityDecay={0.3}
+            cooldownTicks={500}
+            d3AlphaDecay={0.018}
+            d3VelocityDecay={0.25}
           />
           )}
         </div>
@@ -418,7 +482,9 @@ export default function HomePage() {
                   <li key={p.id}>
                     <button
                       onClick={() => {
-                        const node = graphData.nodes.find((n) => n.id === p.id);
+                        const node = graphDataFiltered.nodes.find(
+                          (n) => n.id === p.id,
+                        );
                         if (node) setSelectedNode(node);
                       }}
                       className='text-primary font-medium hover:underline text-left'
