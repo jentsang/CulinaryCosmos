@@ -5,11 +5,14 @@ import dynamic from "next/dynamic";
 import type { GraphNode, GraphData } from "@/types/graph";
 import { SearchBar } from "@/components/SearchBar";
 import { useSearch } from "@/hooks/useSearch";
+import { forceX, forceY } from "d3-force";
 import {
   hashToColor,
   getPairingsWithLevel,
-  spreadNodes,
+  spreadNodesByCategory,
   CATEGORY_LABELS,
+  getCategoryCenter,
+  getCategoryIndex,
 } from "@/utils/graph";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
@@ -32,8 +35,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [affinity, setAffinity] = useState(0);
   const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/graph-data")
@@ -42,7 +45,7 @@ export default function HomePage() {
         return res.json();
       })
       .then((data) => {
-        const nodes = spreadNodes(data.nodes as GraphNode[]);
+        const nodes = spreadNodesByCategory(data.nodes as GraphNode[]);
         setGraphData({ nodes, links: data.links });
         setError(null);
       })
@@ -55,43 +58,14 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const { nodeDegrees, maxDegree } = useMemo(() => {
-    const degrees = new Map<string, number>();
-    if (!graphData) return { nodeDegrees: degrees, maxDegree: 1 };
-    for (const link of graphData.links) {
-      const src =
-        typeof link.source === "string"
-          ? link.source
-          : (link.source as { id?: string })?.id ?? "";
-      const tgt =
-        typeof link.target === "string"
-          ? link.target
-          : (link.target as { id?: string })?.id ?? "";
-      degrees.set(src, (degrees.get(src) ?? 0) + 1);
-      degrees.set(tgt, (degrees.get(tgt) ?? 0) + 1);
-    }
-    const max = Math.max(1, ...degrees.values());
-    return { nodeDegrees: degrees, maxDegree: max };
-  }, [graphData]);
+  useEffect(() => {
+    setExpandedCategories(new Set());
+  }, [selectedNode?.id]);
 
   const graphDataFiltered = useMemo(() => {
     if (!graphData) return { nodes: [], links: [] };
-    const minDegree = (affinity / 100) * maxDegree;
-    const links = graphData.links.filter((link) => {
-      const src =
-        typeof link.source === "string"
-          ? link.source
-          : (link.source as { id?: string })?.id ?? "";
-      const tgt =
-        typeof link.target === "string"
-          ? link.target
-          : (link.target as { id?: string })?.id ?? "";
-      const d1 = nodeDegrees.get(src) ?? 0;
-      const d2 = nodeDegrees.get(tgt) ?? 0;
-      return d1 >= minDegree && d2 >= minDegree;
-    });
-    return { nodes: graphData.nodes, links };
-  }, [graphData, affinity, maxDegree, nodeDegrees]);
+    return { nodes: graphData.nodes, links: graphData.links };
+  }, [graphData]);
 
   const { nodeDegrees: nodeDegreesFiltered, maxDegree: maxDegreeFiltered } =
     useMemo(() => {
@@ -151,19 +125,23 @@ export default function HomePage() {
 
   const pairingsByCategory = useMemo(() => {
     const groups = new Map<string, { node: GraphNode; level: number }[]>();
-    const order = Object.keys(CATEGORY_LABELS);
     for (const p of pairingsWithLevel) {
       const cat = p.node.category ?? "other";
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat)!.push(p);
     }
-    return order
-      .filter((cat) => groups.has(cat))
-      .map((cat) => ({
-        category: cat,
-        label: CATEGORY_LABELS[cat] ?? cat,
-        items: groups.get(cat)!.sort((a, b) => b.level - a.level),
-      }));
+    return Array.from(groups.entries())
+      .map(([cat, items]) => {
+        const sorted = [...items].sort((a, b) => b.level - a.level);
+        const highLevelCount = sorted.filter((i) => i.level >= 3).length;
+        return {
+          category: cat,
+          label: CATEGORY_LABELS[cat] ?? cat,
+          items: sorted,
+          highLevelCount,
+        };
+      })
+      .sort((a, b) => b.highLevelCount - a.highLevelCount);
   }, [pairingsWithLevel]);
 
   const search = useSearch(graphDataFiltered.nodes);
@@ -307,6 +285,25 @@ export default function HomePage() {
       const fg = graphRef.current;
       if (!fg) return;
       (fg as { zoom?: (k: number) => void }).zoom?.(1.8);
+
+      const numCategories = Object.keys(CATEGORY_LABELS).length;
+      fg.d3Force(
+        "x",
+        forceX((d: unknown) => {
+          const n = d as GraphNode;
+          const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
+          return center.x;
+        }).strength(0.08),
+      );
+      fg.d3Force(
+        "y",
+        forceY((d: unknown) => {
+          const n = d as GraphNode;
+          const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
+          return center.y;
+        }).strength(0.08),
+      );
+
       const charge = fg.d3Force("charge") as {
         strength?: (v: number | ((n: unknown, i: number, nodes: unknown[]) => number)) => unknown;
       };
@@ -388,7 +385,7 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
-      <div className='absolute top-4 right-4 z-20 w-56 space-y-3'>
+      <div className='absolute top-4 right-4 z-20'>
         <label className='flex items-center gap-2 cursor-pointer'>
           <input
             type='checkbox'
@@ -400,24 +397,21 @@ export default function HomePage() {
             Show Holy Grail pairings
           </span>
         </label>
-        <div>
-          <label className='block text-xs font-medium text-gray-600 mb-1.5'>
-            Affinity (min connections)
-          </label>
-        <input
-          type='range'
-          min={0}
-          max={100}
-          value={affinity}
-          onChange={(e) => setAffinity(Number(e.target.value))}
-          className='w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-200 accent-primary'
-        />
-        <p className='text-xs text-gray-500 mt-1'>
-          {affinity}% — showing links between ingredients with ≥{" "}
-          {Math.ceil((affinity / 100) * maxDegree)} connections
-        </p>
-        </div>
       </div>
+      {selectedNode?.image && (
+        <aside className='absolute left-4 top-1/2 -translate-y-1/2 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl z-10 overflow-hidden'>
+          <div className='aspect-square w-full bg-gray-100'>
+            <img
+              src={selectedNode.image}
+              alt={selectedNode.name}
+              className='w-full h-full object-cover'
+            />
+          </div>
+          <p className='px-3 py-2 text-sm font-medium text-gray-800 truncate' title={selectedNode.name}>
+            {selectedNode.name}
+          </p>
+        </aside>
+      )}
       <SearchBar
         query={search.query}
         onQueryChange={search.setQuery}
@@ -473,36 +467,57 @@ export default function HomePage() {
             </div>
             <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
             {pairingsByCategory.length > 0 ? (
-              <div className='space-y-3'>
-                {pairingsByCategory.map(({ category, label, items }) => (
-                  <div key={category}>
-                    <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5'>
-                      {label}
-                    </p>
-                    <ul className='space-y-1'>
-                      {items.map(({ node, level }) => (
-                        <li key={node.id}>
-                          <button
-                            onClick={() => {
-                              const n = graphDataFiltered.nodes.find(
-                                (x) => x.id === node.id,
-                              );
-                              if (n) setSelectedNode(n);
-                            }}
-                            className='text-primary font-medium hover:underline text-left text-sm'
-                          >
-                            {node.name}
-                            {level >= 3 && (
-                              <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
-                                {level === 4 ? '★★' : '★'}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+              <div className='space-y-1'>
+                {pairingsByCategory.map(({ category, label, items }) => {
+                  const isExpanded = expandedCategories.has(category);
+                  return (
+                    <div key={category} className='border-b border-gray-100 last:border-0'>
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setExpandedCategories((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(category)) next.delete(category);
+                            else next.add(category);
+                            return next;
+                          });
+                        }}
+                        className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
+                      >
+                        <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
+                          {label}
+                        </span>
+                        <span className='text-gray-400 text-xs'>
+                          {isExpanded ? "▼" : "▶"} {items.length}
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <ul className='space-y-1 pb-2 pl-1'>
+                          {items.map(({ node, level }) => (
+                            <li key={node.id}>
+                              <button
+                                onClick={() => {
+                                  const n = graphDataFiltered.nodes.find(
+                                    (x) => x.id === node.id,
+                                  );
+                                  if (n) setSelectedNode(n);
+                                }}
+                                className='text-primary font-medium hover:underline text-left text-sm'
+                              >
+                                {node.name}
+                                {level >= 3 && (
+                                  <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
+                                    {level === 4 ? '★★' : '★'}
+                                  </span>
+                                )}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className='text-gray-500 text-xs'>No pairings in dataset</p>

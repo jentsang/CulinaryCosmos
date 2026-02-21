@@ -28,6 +28,16 @@ NON_FOOD_WORDS = {
     "around", "the", "world", "example", "avoid", "see",
     "ingredient", "ingredients", "method", "technique",
     "dishes", "foods", "dishes", "appetizers", "desserts",
+    "meats", "juice",  # generic categories, not specific items
+    # Generic categories (not specific food items)
+    "savory", "oil", "vegetables", "vegetable", "fruits", "fruit",
+    "meat", "leaves", "stalk", "paste", "dressing", "dressings",
+    "curries", "chops", "cured meats", "cereals",
+    # Flavor/quality descriptors (not ingredients)
+    "smokiness", "regular", "delicate", "burnt", "candied", "chilled",
+    "condensed", "crusty", "cured", "curly", "clarified", "covered",
+    "dipping", "boiled", "braise", "hard-boiled", "emulsion", "emulsions",
+    "cures", "cottage", "button", "dips",
     "breakfast", "lunch", "dinner", "snack", "meal",
     "crust", "crusts", "sauce", "sauces", "rub", "rubs",
     "powder", "starch", "thickener",
@@ -42,6 +52,14 @@ NON_FOOD_WORDS = {
     "bitter", "umami", "texture", "heat", "crunch", "crunchy", "flaky",
     "velvety", "greasy", "grainy", "luxurious", "heartier", "meatier",
     "fattier", "lighter", "stronger", "sweeter", "deeper", "deeper flavor",
+    # Colors (standalone, not ingredients)
+    "purple", "pink", "blue",
+    # Flavor/descriptor words (not ingredients)
+    "flavorful",
+    # Texture/descriptor words
+    "crispy", "tender", "creamy",
+    # Fragment/place descriptors
+    "country",
 }
 
 # Substring patterns - node contains these and is not a food
@@ -60,6 +78,10 @@ NON_FOOD_SUBSTRINGS = {
     " so many childhood", " spread them out", " used the husks",
     " using smoked salt", " virtually all", " wash greens",
     " while in large", " your life", "—david", "— ",
+    # Flavor descriptors (X-flavored, floral flavors, etc.)
+    "-flavored", " flavored", "flavorful", "flavors ", "berry-flavored",
+    "neutral-flavored", "stronger-flavored", "neutral flavored",
+    "floral flavors", "assertive fish",
 }
 
 # Place names (US states, cities, countries when standalone)
@@ -109,6 +131,8 @@ NON_FOOD_PHRASES = {
     "was seared well", "we tasted it", "which i pair with",
     "which produce a juice", "which they added to",
     "while in large doses", "you wouldn't", "your life",
+    "berry-flavored", "floral flavors", "neutral flavored", "neutral-flavored",
+    "stronger-flavored",
 }
 
 

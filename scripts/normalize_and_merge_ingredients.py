@@ -68,6 +68,27 @@ def is_single_ingredient(node_id: str) -> bool:
     return True
 
 
+def expand_comma_to_canonicals(name: str) -> list[str]:
+    """
+    Expand comma-separated items to canonical forms. Returns a list of 1+ canonical names.
+    E.g. "chocolate, dark, milk" -> ["dark chocolate", "milk chocolate"]
+    """
+    lower = name.lower().strip()
+    if ", " not in lower:
+        return [normalize_to_canonical(lower)]
+
+    parts = [p.strip() for p in lower.split(", ")]
+    base = parts[0]
+    variants = parts[1:]
+
+    # "chocolate, dark, milk" -> ["dark chocolate", "milk chocolate"]
+    if base == "chocolate" and len(variants) >= 2:
+        return [f"{v} chocolate" for v in variants]
+
+    # Single variant: use normalize_to_canonical
+    return [normalize_to_canonical(name)]
+
+
 def normalize_to_canonical(name: str) -> str:
     """
     Map variant names to a canonical form for merging.
@@ -122,6 +143,77 @@ def normalize_to_canonical(name: str) -> str:
         # "vinegar, X" → "X vinegar"
         if a == "vinegar" and b:
             return f"{b} vinegar"
+        # "balsamic, aged vinegar" → "aged balsamic vinegar"
+        if a == "balsamic" and "vinegar" in b:
+            return f"{b} {a}"
+        # "pepper, black/white" → "black pepper" / "white pepper"
+        if a == "pepper" and b in ("black", "white"):
+            return f"{b} pepper"
+        # "cream, heavy" → "heavy cream"
+        if a == "cream" and b:
+            return f"{b} cream"
+        # "chicken, roasted" → "roasted chicken"
+        if a == "chicken" and b:
+            return f"{b} chicken"
+        # "crab, soft-shell" → "soft-shell crab"
+        if a == "crab" and b:
+            return f"{b} crab"
+        # "chocolate, white" → "white chocolate"
+        if a == "chocolate" and b:
+            return f"{b} chocolate"
+        # "ham, X" → "X ham"
+        if a == "ham" and b:
+            return f"{b} ham"
+        # "honey, X" → "X honey"
+        if a == "honey" and b:
+            return f"{b} honey"
+        # "lamb, chops" → "lamb chops"
+        if a == "lamb" and b:
+            return f"{a} {b}" if b in ("chops", "shank") else f"{b} {a}"
+        # "lemon, juice" / "lime, juice" → "lemon juice" / "lime juice"
+        if a in ("lemon", "lime", "orange") and b == "juice":
+            return f"{a} juice"
+        # "lettuce, romaine" → "romaine lettuce"
+        if a == "lettuce" and b:
+            return f"{b} lettuce"
+        # "liver, X" → "X liver"
+        if a == "liver" and b:
+            return f"{b} liver"
+        # "mint, peppermint" → "peppermint"
+        if a == "mint" and b == "peppermint":
+            return "peppermint"
+        if a == "mint" and b:
+            return f"{b} mint"
+        # "mustard, dijon" → "dijon mustard"
+        if a == "mustard" and b:
+            return f"{b} mustard"
+        # "paprika, smoked" → "smoked paprika"
+        if a == "paprika" and b:
+            return f"{b} paprika"
+        # "parsley, flat-leaf" → "flat-leaf parsley"
+        if a == "parsley" and b:
+            return f"{b} parsley"
+        # "rice, X" → "X rice"
+        if a == "rice" and b:
+            return f"{b} rice"
+        # "salmon, X" / "trout, X" → "X salmon" / "X trout"
+        if a in ("salmon", "trout") and b:
+            return f"{b} {a}"
+        # "salt, X" → "X salt"
+        if a == "salt" and b:
+            return f"{b} salt" if " " not in b else b
+        # "savory, summer" → "summer savory"
+        if a == "savory" and b:
+            return f"{b} savory"
+        # "stock, chicken" → "chicken stock"
+        if a == "stock" and b:
+            return f"{b} stock"
+        # "sugar, X" → "X sugar"
+        if a == "sugar" and b:
+            return f"{b} sugar"
+        # "wine, X" → "X wine"
+        if a == "wine" and b:
+            return f"{b} wine"
         # "cabbage, X" → "X cabbage"
         if a == "cabbage" and b:
             return f"{b} cabbage"
@@ -141,6 +233,8 @@ def normalize_to_canonical(name: str) -> str:
         # Generic: use first part if second is qualifier
         if b in ("ground", "whole", "minced", "chopped", "sliced"):
             return a
+        # Generic "X, Y" -> "Y X" (e.g. "mint, northeast africa" -> "northeast africa mint")
+        return f"{b} {a}"
 
     # Singular/plural for common ingredients
     singular_map = {
@@ -186,47 +280,51 @@ def main():
     removed_phrases = len(nodes) - len(nodes_filtered)
     print(f"Filtered {removed_phrases} phrase/non-ingredient nodes")
 
-    # Step 2: Build canonical mapping (original_id → canonical_id)
-    id_to_canonical = {}
+    # Step 2: Build canonical mapping (original_id → list of canonical_ids)
+    # Comma-separated items like "chocolate, dark, milk" expand to multiple canonicals
+    id_to_canonicals = {}
     for n in nodes_filtered:
         orig = n["id"]
-        canon = normalize_to_canonical(orig)
         # Keep "apricot brandy" etc. as distinct (compound products)
         if " brandy" in orig or " liqueur" in orig or " wine" in orig or " vinegar" in orig:
+            canon = normalize_to_canonical(orig)
             if orig != canon and canon in ("apricot", "cherry", "orange", "peach"):
-                # "apricot brandy" - keep as is, don't merge with "apricot"
-                id_to_canonical[orig] = orig
+                id_to_canonicals[orig] = [orig]
                 continue
-        id_to_canonical[orig] = canon
+        id_to_canonicals[orig] = expand_comma_to_canonicals(orig)
 
-    # Step 3: Merge nodes - group by canonical id
+    # Step 3: Merge nodes - collect all canonical ids (split items may create new nodes)
     canon_to_node = {}
     for n in nodes_filtered:
-        orig = n["id"]
-        canon = id_to_canonical[orig]
-        if canon not in canon_to_node:
-            canon_to_node[canon] = {"id": canon, "label": canon, "category": n.get("category", "other")}
-        # Prefer shorter label
-        if len(canon) < len(canon_to_node[canon]["label"]):
-            canon_to_node[canon]["label"] = canon
+        for canon in id_to_canonicals[n["id"]]:
+            if canon not in canon_to_node:
+                canon_to_node[canon] = {"id": canon, "label": canon, "category": n.get("category", "other")}
 
-    # Step 4: Remap edges to canonical ids, deduplicate
-    edge_counts = defaultdict(int)
+    # Step 4: Remap edges - expand to all canonical pairs, deduplicate
+    edge_data = {}  # key -> (weight, recommendation_level)
     for e in edges_filtered:
-        src = id_to_canonical.get(e["source"], e["source"])
-        tgt = id_to_canonical.get(e["target"], e["target"])
-        if src != tgt and src in canon_to_node and tgt in canon_to_node:
-            key = (min(src, tgt), max(src, tgt))
-            edge_counts[key] = max(edge_counts[key], e.get("weight", 1))
+        src_canons = id_to_canonicals.get(e["source"], [e["source"]])
+        tgt_canons = id_to_canonicals.get(e["target"], [e["target"]])
+        w = e.get("weight", 1)
+        rec = e.get("recommendation_level", 1)
+        for src in src_canons:
+            for tgt in tgt_canons:
+                if src != tgt and src in canon_to_node and tgt in canon_to_node:
+                    key = (min(src, tgt), max(src, tgt))
+                    prev = edge_data.get(key, (0, 0))
+                    edge_data[key] = (max(prev[0], w), max(prev[1], rec))
 
     edges_merged = [
-        {"source": k[0], "target": k[1], "weight": v}
-        for (k, v) in edge_counts.items()
+        {"source": k[0], "target": k[1], "weight": v[0], "recommendation_level": v[1]}
+        for (k, v) in edge_data.items()
     ]
 
     nodes_merged = list(canon_to_node.values())
-    merge_count = len(nodes_filtered) - len(nodes_merged)
-    print(f"Merged {merge_count} similar nodes ({len(nodes_filtered)} → {len(nodes_merged)})")
+    delta = len(nodes_merged) - len(nodes_filtered)
+    if delta < 0:
+        print(f"Merged {-delta} similar nodes ({len(nodes_filtered)} → {len(nodes_merged)})")
+    else:
+        print(f"Normalized/split comma items: {len(nodes_filtered)} → {len(nodes_merged)} nodes")
 
     # Update data
     data["nodes"] = nodes_merged

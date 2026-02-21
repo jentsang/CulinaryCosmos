@@ -19,9 +19,21 @@ function parseCSVSimple(text: string): Record<string, string>[] {
   return rows;
 }
 
-async function loadFlavorPairingsJson(dataDir: string): Promise<{ nodes: { id: string; name: string; group?: number }[]; links: { source: string; target: string; value?: number }[] } | null> {
+async function loadNodeImages(dataDir: string): Promise<Record<string, string>> {
   try {
-    const raw = await readFile(path.join(dataDir, "flavor_pairings.json"), "utf-8");
+    const raw = await readFile(path.join(dataDir, "node_images.json"), "utf-8");
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+async function loadFlavorPairingsJson(dataDir: string): Promise<{ nodes: { id: string; name: string; group?: number; image?: string }[]; links: { source: string; target: string; value?: number }[] } | null> {
+  try {
+    const [raw, nodeImages] = await Promise.all([
+      readFile(path.join(dataDir, "flavor_pairings.json"), "utf-8"),
+      loadNodeImages(dataDir),
+    ]);
     const data = JSON.parse(raw) as {
       nodes?: { id: string; label?: string; category?: string }[];
       edges?: { source: string; target: string; weight?: number }[];
@@ -36,6 +48,7 @@ async function loadFlavorPairingsJson(dataDir: string): Promise<{ nodes: { id: s
       name: n.label ?? n.id,
       group: undefined as number | undefined,
       category: n.category,
+      image: nodeImages[n.id],
     }));
 
     const links = jsonEdges.map((e) => ({

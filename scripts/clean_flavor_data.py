@@ -161,6 +161,7 @@ BLOCKLIST = {
     "from the pig",
     "putting the fish",
     "then the corn",
+    "as flour", "as mustard seeds", "assertive fish like", "asparagus soup:",
 }
 
 # Regex patterns - node is removed if it matches
@@ -175,12 +176,15 @@ BLOCKLIST_REGEX = [
     r"^that ", r"^this ",
     r"^if i\b", r"^when ", r"^because ",
     r"^but\s", r"^good\s", r"^in small",
+    r"^or\s",            # "or whatever", "or butter", "or curry powder" - phrase fragment
     r"^or honey", r"^on me ",
     r"^a\s",           # "a dish", "a cake" - phrase
     r"^an\s",
     r"^for\s",           # "for morel mushrooms", "for poultry" - instruction, not ingredient
+    r"^as\s",            # "as flour", "as mustard seeds" - phrase fragment
     r"\s+and\s+",        # "buying and cleaning mushrooms", "salt and pepper" - phrase or multi-item
     r"\s+the\s+",        # "scoop out the mushrooms", "in the shell" - phrase
+    r"\s+or\s+",         # "X or Y" - alternative, not single ingredient (catches any " or ")
     r"\s(cuisine|cuisines)\s*$",  # ends with "cuisine" - e.g. "alsatian cuisine"
     r"^cuisine$",       # just "cuisine"
     r"^\d",              # starts with digit
@@ -223,6 +227,7 @@ def should_remove(node_id: str) -> bool:
         "alabama", "alinea", "alcohol", "acidity", "aged", "alsatian",
         "adnews", "acknowledgments", "acquiring", "achieve", "adding",
         "after a", "about the", "aka tagines", "it",
+        "bell", "blood",  # fragments (bell pepper, blood orange)
     }
     if lower in non_food:
         return True
