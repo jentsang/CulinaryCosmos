@@ -35,8 +35,6 @@ export function hashToColor(str: string, brightForDark = false): string {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
-const LOG = "[Graph]";
-
 /** Check if a link exists between two node IDs. */
 export function hasLinkBetween(
   nodeIdA: string,
@@ -61,14 +59,6 @@ export function hasLinkBetween(
       break;
     }
   }
-  console.log(LOG, "hasLinkBetween", {
-    nodeIdA,
-    nodeIdB,
-    linkCount: links.length,
-    found,
-    linkSourceType: typeof links[0]?.source,
-    linkTargetType: typeof links[0]?.target,
-  });
   return found;
 }
 
@@ -134,8 +124,8 @@ export function getPairingsWithLevel(
 /** Category order for layout (matches CATEGORY_LABELS). */
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 
-/** Radius for category cluster layout. */
-const LAYOUT_RADIUS = 450;
+/** Radius for category cluster layout. Smaller radius keeps isolated nodes closer to the main graph. */
+const LAYOUT_RADIUS = 320;
 
 /** Get (x, y) center for a category by its index (0..numCategories-1). */
 export function getCategoryCenter(categoryIndex: number, numCategories: number): { x: number; y: number } {

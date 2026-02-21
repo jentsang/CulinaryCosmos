@@ -8,6 +8,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { forceX, forceY } from "d3-force";
 import {
   hashToColor,
+  hasLinkBetween,
   getPairingsWithLevel,
   spreadNodesByCategory,
   CATEGORY_LABELS,
@@ -41,6 +42,7 @@ export default function HomePage() {
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [sidebarLeftCollapsed, setSidebarLeftCollapsed] = useState(false);
   const [sidebarRightCollapsed, setSidebarRightCollapsed] = useState(false);
+  const prevNodeCountRef = useRef(0);
 
   useEffect(() => {
     fetch("/api/graph-data")
@@ -309,9 +311,12 @@ export default function HomePage() {
       if (highlightedNodes.length > 0) {
         const srcHighlighted = highlightedNodeIds.has(src ?? "");
         const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
-        return srcHighlighted && tgtHighlighted
-          ? "rgba(255, 59, 48, 0.9)"
-          : isLevel4
+        if (srcHighlighted && tgtHighlighted) {
+          return (link as { isSynthetic?: boolean }).isSynthetic
+            ? "rgba(59, 130, 246, 0.9)"
+            : "rgba(255, 59, 48, 0.9)";
+        }
+        return isLevel4
             ? "rgba(148, 163, 184, 0.6)"
             : "rgba(0,0,0,0)";
       }
@@ -347,26 +352,67 @@ export default function HomePage() {
     [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
-  const graphDataStable = useMemo(
-    () => graphDataFiltered,
-    [graphDataFiltered],
+  const linkLineDashFn = useCallback(
+    (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
+      if ((link as { isSynthetic?: boolean }).isSynthetic) return [4, 4];
+      return null;
+    },
+    [],
   );
 
+  // When Gemini returns multiple ingredients with no existing pairing, add synthetic dotted links.
+  const graphDataWithSyntheticLinks = useMemo(() => {
+    const { nodes, links } = graphDataFiltered;
+    if (highlightedNodes.length < 2) return { nodes, links };
+
+    const syntheticLinks: { source: string; target: string; isSynthetic?: boolean }[] = [];
+    for (let i = 0; i < highlightedNodes.length; i++) {
+      for (let j = i + 1; j < highlightedNodes.length; j++) {
+        const a = highlightedNodes[i];
+        const b = highlightedNodes[j];
+        if (!hasLinkBetween(a.id, b.id, links)) {
+          syntheticLinks.push({ source: a.id, target: b.id, isSynthetic: true });
+        }
+      }
+    }
+    return {
+      nodes,
+      links: [...links, ...syntheticLinks],
+    };
+  }, [graphDataFiltered, highlightedNodes]);
+
+  const graphDataStable = useMemo(
+    () => graphDataWithSyntheticLinks,
+    [graphDataWithSyntheticLinks],
+  );
+
+  const hasSyntheticLinks = graphDataWithSyntheticLinks.links.length > graphDataFiltered.links.length;
+
   useEffect(() => {
-    if (!graphDataFiltered.nodes.length) return;
+    const nodeCount = graphDataFiltered.nodes.length;
+    if (nodeCount === 0) {
+      prevNodeCountRef.current = 0;
+      return;
+    }
     const id = setTimeout(() => {
       const fg = graphRef.current;
       if (!fg) return;
-      (fg as { zoom?: (k: number) => void }).zoom?.(1.0);
 
       const numCategories = Object.keys(CATEGORY_LABELS).length;
+      // Stronger pull toward category center for low-degree/isolated nodes so they aren't
+      // pushed far out by repulsion from the main graph clump.
+      const positionStrength = (node: unknown) => {
+        const n = node as GraphNode;
+        const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
+        return degree <= 1 ? 0.12 : 0.04;
+      };
       fg.d3Force(
         "x",
         forceX((d: unknown) => {
           const n = d as GraphNode;
           const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
           return center.x;
-        }).strength(0.04),
+        }).strength(positionStrength as (n: unknown, i: number, nodes: unknown[]) => number),
       );
       fg.d3Force(
         "y",
@@ -374,7 +420,7 @@ export default function HomePage() {
           const n = d as GraphNode;
           const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
           return center.y;
-        }).strength(0.04),
+        }).strength(positionStrength as (n: unknown, i: number, nodes: unknown[]) => number),
       );
 
       const charge = fg.d3Force("charge") as {
@@ -396,7 +442,8 @@ export default function HomePage() {
       if (link?.distance) link.distance(55);
       if (link?.strength) {
         link.strength((l: unknown) => {
-          const linkObj = l as { source?: { id?: string } | string; target?: { id?: string } | string };
+          const linkObj = l as { source?: { id?: string } | string; target?: { id?: string } | string; isSynthetic?: boolean };
+          if (linkObj.isSynthetic) return 0; // Synthetic links are visual only, don't affect layout
           const srcId =
             typeof linkObj.source === "string"
               ? linkObj.source
@@ -412,11 +459,18 @@ export default function HomePage() {
           return 0.5 + 0.1 * Math.pow(ratio, 1.2);
         });
       }
-      fg.d3ReheatSimulation?.();
+      // Only reheat when transitioning from 0 to >0 nodes (initial load or restore from empty).
+      // Avoid reheat on category filter toggle to prevent sporadic graph movement.
+      if (prevNodeCountRef.current === 0 && nodeCount > 0) {
+        fg.d3ReheatSimulation?.();
+      }
+      prevNodeCountRef.current = nodeCount;
     }, 0);
     return () => clearTimeout(id);
   }, [graphDataFiltered, nodeDegreesFull, maxDegreeFull]);
 
+  // Only adjust view when selection changes, NOT when category filter changes.
+  // This prevents the graph from jumping/resetting when toggling categories.
   useEffect(() => {
     if (!graphRef.current || !graphDataFiltered.nodes.length) return;
     const fg = graphRef.current;
@@ -437,9 +491,10 @@ export default function HomePage() {
       }
       return;
     }
+    // Reset to center only when user clears selection (not when filtering categories)
     (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(0, 0, 400);
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(1.0, 400);
-  }, [selectedNode, highlightedNodes, graphDataFiltered]);
+  }, [selectedNode, highlightedNodes]);
 
   if (loading) {
     return (
@@ -641,6 +696,7 @@ export default function HomePage() {
             linkVisibility={linkVisibilityFn}
             linkColor={linkColorFn}
             linkWidth={linkWidthFn}
+            linkLineDash={linkLineDashFn}
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={clearHighlight}
@@ -684,6 +740,12 @@ export default function HomePage() {
                     <p className='text-xs text-gray-400 mb-2'>
                       Suggested ingredients from your search
                     </p>
+                    {hasSyntheticLinks && (
+                      <p className='text-xs text-sky-400 mb-2 flex items-center gap-1'>
+                        <span aria-hidden>—</span>
+                        Dotted blue lines indicate pairings suggested by Gemini (not in database)
+                      </p>
+                    )}
                     <a
                       href={`https://www.google.com/search?q=${encodeURIComponent(
                         highlightedNodes.map((n) => n.name).join(" ") + " recipes",
