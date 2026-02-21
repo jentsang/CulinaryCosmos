@@ -41,10 +41,10 @@ export function SearchBar({
         onKeyDown={(e) => {
           if (e.key === "Enter") onSubmit();
         }}
-        className='w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm'
+        className='w-full px-4 py-2.5 rounded-lg border border-slate-600 bg-slate-800/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-gray-100 placeholder-gray-400'
       />
       {focused && query.trim() && (
-        <div className='absolute top-full left-0 right-0 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden max-h-60 overflow-y-auto'>
+        <div className='absolute top-full left-0 right-0 mt-1 rounded-lg border border-slate-600 bg-slate-800 shadow-lg overflow-hidden max-h-60 overflow-y-auto'>
           {results.length > 0 ? (
             results.map((node) => (
               <button
@@ -56,17 +56,17 @@ export function SearchBar({
                   onQueryChange("");
                   onFocusChange(false);
                 }}
-                className='w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0'
+                className='w-full px-4 py-2.5 text-left text-sm text-gray-100 hover:bg-slate-700 border-b border-slate-600 last:border-0'
               >
                 {node.name}
               </button>
             ))
           ) : (
-            <div className='px-4 py-3 text-sm text-gray-500'>
+            <div className='px-4 py-3 text-sm text-gray-400'>
               {isSearching ? (
                 "Searching..."
               ) : promptError ? (
-                <span className='text-red-600'>{promptError}</span>
+                <span className='text-red-400'>{promptError}</span>
               ) : (
                 "No matches — press Enter to search"
               )}

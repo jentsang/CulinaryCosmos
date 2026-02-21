@@ -96,6 +96,10 @@ def normalize_to_canonical(name: str) -> str:
     """
     lower = name.lower().strip()
 
+    # "with X" → X (phrase fragment, e.g. "with dark chocolate" → "dark chocolate")
+    if lower.startswith("with "):
+        return normalize_to_canonical(lower[5:].strip())
+
     # "liqueurs: apricot" → "apricot liqueur"
     if ": " in lower:
         cat, ing = lower.split(": ", 1)
