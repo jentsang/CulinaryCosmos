@@ -34,6 +34,43 @@ export function hashToColor(str: string): string {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
+const LOG = "[Graph]";
+
+/** Check if a link exists between two node IDs. */
+export function hasLinkBetween(
+  nodeIdA: string,
+  nodeIdB: string,
+  links: GraphLink[],
+): boolean {
+  let found = false;
+  for (const link of links) {
+    const src =
+      typeof link.source === "string"
+        ? link.source
+        : ((link.source as { id?: string }).id ?? "");
+    const tgt =
+      typeof link.target === "string"
+        ? link.target
+        : ((link.target as { id?: string }).id ?? "");
+    if (
+      (src === nodeIdA && tgt === nodeIdB) ||
+      (src === nodeIdB && tgt === nodeIdA)
+    ) {
+      found = true;
+      break;
+    }
+  }
+  console.log(LOG, "hasLinkBetween", {
+    nodeIdA,
+    nodeIdB,
+    linkCount: links.length,
+    found,
+    linkSourceType: typeof links[0]?.source,
+    linkTargetType: typeof links[0]?.target,
+  });
+  return found;
+}
+
 export function getPairings(
   nodeId: string,
   links: GraphLink[],

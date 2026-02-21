@@ -35,6 +35,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [highlightedPairing, setHighlightedPairing] = useState<{
+    source: GraphNode;
+    target: GraphNode;
+  } | null>(null);
   const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
@@ -60,7 +64,12 @@ export default function HomePage() {
 
   useEffect(() => {
     setExpandedCategories(new Set());
-  }, [selectedNode?.id]);
+  }, [selectedNode?.id, highlightedPairing]);
+
+  const clearHighlight = useCallback(() => {
+    setSelectedNode(null);
+    setHighlightedPairing(null);
+  }, []);
 
   const graphDataFiltered = useMemo(() => {
     if (!graphData) return { nodes: [], links: [] };
@@ -144,7 +153,7 @@ export default function HomePage() {
       .sort((a, b) => b.highLevelCount - a.highLevelCount);
   }, [pairingsWithLevel]);
 
-  const search = useSearch(graphDataFiltered.nodes);
+  const search = useSearch(graphDataFiltered.nodes, graphDataFiltered.links);
 
   useEffect(() => {
     if (!graphData) return;
@@ -177,49 +186,56 @@ export default function HomePage() {
       } | null,
     ) => {
       if (!node || !graphDataFiltered.nodes.length) {
-        setSelectedNode(null);
+        clearHighlight();
         return;
       }
       const graphNode = graphDataFiltered.nodes.find(
         (n) => n.id === String(node.id) || n.name === node.name,
       );
       if (graphNode) {
+        setHighlightedPairing(null);
         setSelectedNode(graphNode);
       }
     },
-    [graphDataFiltered],
+    [graphDataFiltered, clearHighlight],
   );
 
   const nodeColorFn = useCallback(
     (node: unknown) => {
       const n = node as GraphNode;
+      const isHighlightedPairing =
+        highlightedPairing &&
+        (n.id === highlightedPairing.source.id || n.id === highlightedPairing.target.id);
       const isSelected = selectedNode && n.id === selectedNode.id;
       const isPairing = selectedNode && pairings.some((p) => p.id === n.id);
+      if (isHighlightedPairing) return "#FF3B30";
       if (isSelected) return "#FF3B30";
       if (isPairing) return "#34C759";
       if (n.category) return hashToColor(n.category);
       const g = n.group ?? 0;
       return NODE_COLORS[g % NODE_COLORS.length];
     },
-    [selectedNode, pairings],
+    [selectedNode, pairings, highlightedPairing],
   );
 
   const nodeValFn = useCallback(
     (node: unknown) => {
       const n = node as GraphNode;
+      const isHighlightedPairing =
+        highlightedPairing &&
+        (n.id === highlightedPairing.source.id || n.id === highlightedPairing.target.id);
       const isSelected = selectedNode && n.id === selectedNode.id;
-      if (isSelected) return 20;
+      if (isHighlightedPairing || isSelected) return 20;
       const degree = nodeDegreesFiltered.get(n.id ?? "") ?? 0;
       return 6 + 18 * (degree / maxDegreeFiltered);
     },
-    [selectedNode, nodeDegreesFiltered, maxDegreeFiltered],
+    [selectedNode, highlightedPairing, nodeDegreesFiltered, maxDegreeFiltered],
   );
 
   const linkVisibilityFn = useCallback(
     (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
       const val = link.value as number | undefined;
       const isLevel4 = val === 4;
-      if (!selectedNode) return isLevel4;
       const src =
         typeof link.source === "string"
           ? link.source
@@ -228,9 +244,17 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
+      if (highlightedPairing) {
+        const { source, target } = highlightedPairing;
+        const isPairingLink =
+          (src === source.id && tgt === target.id) ||
+          (src === target.id && tgt === source.id);
+        return isPairingLink || isLevel4;
+      }
+      if (!selectedNode) return isLevel4;
       return src === selectedNode.id || tgt === selectedNode.id;
     },
-    [selectedNode],
+    [selectedNode, highlightedPairing],
   );
 
   const linkColorFn = useCallback(
@@ -239,7 +263,6 @@ export default function HomePage() {
     ) => {
       const val = link.value as number | undefined;
       const isLevel4 = val === 4;
-      if (!selectedNode) return isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
       const src =
         typeof link.source === "string"
           ? link.source
@@ -248,10 +271,18 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
+      if (highlightedPairing) {
+        const { source, target } = highlightedPairing;
+        const isPairingLink =
+          (src === source.id && tgt === target.id) ||
+          (src === target.id && tgt === source.id);
+        return isPairingLink ? "rgba(255, 59, 48, 0.8)" : isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
+      }
+      if (!selectedNode) return isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
       const connected = src === selectedNode.id || tgt === selectedNode.id;
       return connected ? "rgba(52, 199, 89, 0.6)" : "rgba(0,0,0,0)";
     },
-    [selectedNode],
+    [selectedNode, highlightedPairing],
   );
 
   const linkWidthFn = useCallback(
@@ -260,7 +291,6 @@ export default function HomePage() {
     ) => {
       const val = link.value as number | undefined;
       const isLevel4 = val === 4;
-      if (!selectedNode) return isLevel4 ? 1 : 0;
       const src =
         typeof link.source === "string"
           ? link.source
@@ -269,9 +299,17 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
+      if (highlightedPairing) {
+        const { source, target } = highlightedPairing;
+        const isPairingLink =
+          (src === source.id && tgt === target.id) ||
+          (src === target.id && tgt === source.id);
+        return isPairingLink ? 3 : isLevel4 ? 1 : 0;
+      }
+      if (!selectedNode) return isLevel4 ? 1 : 0;
       return src === selectedNode.id || tgt === selectedNode.id ? 2.5 : 1;
     },
-    [selectedNode],
+    [selectedNode, highlightedPairing],
   );
 
   const graphDataStable = useMemo(
@@ -345,19 +383,37 @@ export default function HomePage() {
   }, [graphDataFiltered, nodeDegreesFiltered, maxDegreeFiltered]);
 
   useEffect(() => {
-    if (!selectedNode || !graphRef.current || !graphDataFiltered.nodes.length)
+    if (!graphRef.current || !graphDataFiltered.nodes.length) return;
+    const fg = graphRef.current;
+    if (highlightedPairing) {
+      const srcNode = graphDataFiltered.nodes.find(
+        (n) => n.id === highlightedPairing.source.id,
+      ) as { x?: number; y?: number } | undefined;
+      const tgtNode = graphDataFiltered.nodes.find(
+        (n) => n.id === highlightedPairing.target.id,
+      ) as { x?: number; y?: number } | undefined;
+      if (
+        srcNode &&
+        tgtNode &&
+        typeof srcNode.x === "number" &&
+        typeof srcNode.y === "number" &&
+        typeof tgtNode.x === "number" &&
+        typeof tgtNode.y === "number"
+      ) {
+        const cx = (srcNode.x + tgtNode.x) / 2;
+        const cy = (srcNode.y + tgtNode.y) / 2;
+        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(cx, cy, 400);
+        (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
+      }
       return;
+    }
+    if (!selectedNode) return;
     const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
     const n = (node ?? selectedNode) as { x?: number; y?: number };
     if (typeof n.x !== "number" || typeof n.y !== "number") return;
-    const fg = graphRef.current;
-    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(
-      n.x,
-      n.y,
-      400,
-    );
+    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(n.x, n.y, 400);
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
-  }, [selectedNode, graphDataFiltered]);
+  }, [selectedNode, highlightedPairing, graphDataFiltered]);
 
   if (loading) {
     return (
@@ -418,16 +474,31 @@ export default function HomePage() {
         focused={search.focused}
         onFocusChange={search.setFocused}
         results={search.fuzzyResults}
-        onSelectNode={setSelectedNode}
+        onSelectNode={(node) => {
+          setHighlightedPairing(null);
+          setSelectedNode(node);
+        }}
         onSubmit={() =>
-          search.submitSearch(setSelectedNode, (result) => {
-            if (result.type === "prompt") {
-              // TODO: handle LLM result when integrated
-            }
-          })
+          search.submitSearch(
+            (node) => {
+              setHighlightedPairing(null);
+              setSelectedNode(node);
+            },
+            (result) => {
+              if (result.type === "prompt") {
+                // TODO: handle LLM result when integrated
+              }
+            },
+            (source, target) => {
+              setSelectedNode(null);
+              setHighlightedPairing({ source, target });
+            },
+          )
         }
         isSearching={search.isSearching}
         promptError={search.promptError}
+        useCursor={search.useCursor}
+        onUseCursorChange={search.setUseCursor}
       />
       <div className='flex flex-1 min-h-0 relative'>
         <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-gray-50 relative w-full h-full'>
@@ -447,14 +518,31 @@ export default function HomePage() {
             linkWidth={linkWidthFn}
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
-            onBackgroundClick={() => setSelectedNode(null)}
+            onBackgroundClick={clearHighlight}
             cooldownTicks={500}
             d3AlphaDecay={0.018}
             d3VelocityDecay={0.25}
           />
           )}
         </div>
-        {selectedNode ? (
+        {highlightedPairing ? (
+          <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
+            <div className='flex items-center justify-between mb-3'>
+              <h2 className='font-bold text-sm pr-2'>
+                {highlightedPairing.source.name} + {highlightedPairing.target.name}
+              </h2>
+              <button
+                onClick={clearHighlight}
+                className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+              >
+                ✕
+              </button>
+            </div>
+            <p className='text-xs text-gray-600'>
+              Suggested pairing from your search
+            </p>
+          </aside>
+        ) : selectedNode ? (
           <aside className='absolute right-4 top-1/2 -translate-y-1/2 w-52 max-h-[50vh] border border-gray-200 bg-white/95 backdrop-blur px-3 py-4 overflow-y-auto flex flex-col rounded-lg shadow-xl z-10'>
             <div className='flex items-center justify-between mb-3'>
               <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>

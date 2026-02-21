@@ -7,11 +7,12 @@ import {
   search,
   type SearchResult,
 } from "@/services/searchService";
-import type { GraphNode } from "@/types/graph";
+import type { GraphNode, GraphLink } from "@/types/graph";
 
-export function useSearch(nodes: GraphNode[]) {
+export function useSearch(nodes: GraphNode[], links: GraphLink[] = []) {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
+  const [useCursor, setUseCursor] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [promptError, setPromptError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export function useSearch(nodes: GraphNode[]) {
     async (
       onNodeSelect: (node: GraphNode) => void,
       onPromptResult?: (result: SearchResult) => void,
+      onPairingSelect?: (source: GraphNode, target: GraphNode) => void,
     ) => {
       const trimmed = query.trim();
       if (!trimmed) return;
@@ -39,8 +41,20 @@ export function useSearch(nodes: GraphNode[]) {
       setIsSearching(true);
       setPromptError(null);
       try {
-        const result = await search(trimmed, nodes);
-        if (result.type === "node") {
+        const result = await search(trimmed, nodes, links, useCursor ? "cursor" : "gemini");
+        console.log("[useSearch] result", {
+          type: result.type,
+          ...(result.type === "pairing"
+            ? { source: result.source?.id, target: result.target?.id }
+            : result.type === "node"
+              ? { nodeId: result.node?.id }
+              : {}),
+        });
+        if (result.type === "pairing" && onPairingSelect) {
+          onPairingSelect(result.source, result.target);
+          setQuery("");
+          setFocused(false);
+        } else if (result.type === "node") {
           onNodeSelect(result.node);
           setQuery("");
           setFocused(false);
@@ -53,7 +67,7 @@ export function useSearch(nodes: GraphNode[]) {
         setIsSearching(false);
       }
     },
-    [query, nodes],
+    [query, nodes, links, useCursor],
   );
 
   return {
@@ -61,6 +75,8 @@ export function useSearch(nodes: GraphNode[]) {
     setQuery,
     focused,
     setFocused,
+    useCursor,
+    setUseCursor,
     fuzzyResults,
     submitSearch,
     isSearching,
