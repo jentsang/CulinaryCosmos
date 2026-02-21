@@ -12,6 +12,8 @@ export interface SearchBarProps {
   onSubmit: () => void;
   isSearching?: boolean;
   promptError?: string | null;
+  useCursor?: boolean;
+  onUseCursorChange?: (checked: boolean) => void;
 }
 
 export function SearchBar({
@@ -24,6 +26,8 @@ export function SearchBar({
   onSubmit,
   isSearching = false,
   promptError = null,
+  useCursor = false,
+  onUseCursorChange,
 }: SearchBarProps) {
   return (
     <div className='absolute top-4 left-4 z-10 w-72'>
@@ -70,6 +74,17 @@ export function SearchBar({
           )}
         </div>
       )}
+      {/* {onUseCursorChange && (
+        <label className='flex items-center gap-2 mt-2 text-xs text-gray-600 cursor-pointer'>
+          <input
+            type='checkbox'
+            checked={useCursor}
+            onChange={(e) => onUseCursorChange(e.target.checked)}
+            className='rounded border-gray-300 text-primary focus:ring-primary'
+          />
+          Use Cursor Cloud Agents
+        </label>
+      )} */}
     </div>
   );
 }
