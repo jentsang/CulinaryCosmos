@@ -19,7 +19,7 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
-const NODE_COLORS = ["#007AFF", "#34C759", "#FF9500", "#AF52DE"];
+const NODE_COLORS = ["#3B82F6", "#22C55E", "#F97316", "#A855F7"];
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -243,7 +243,7 @@ export default function HomePage() {
       if (isHighlightedPairing) return "#FF3B30";
       if (isSelected) return "#FF3B30";
       if (isPairing) return "#34C759";
-      if (n.category) return hashToColor(n.category);
+      if (n.category) return hashToColor(n.category, true);
       const g = n.group ?? 0;
       return NODE_COLORS[g % NODE_COLORS.length];
     },
@@ -308,11 +308,11 @@ export default function HomePage() {
         const isPairingLink =
           (src === source.id && tgt === target.id) ||
           (src === target.id && tgt === source.id);
-        return isPairingLink ? "rgba(255, 59, 48, 0.8)" : isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
+        return isPairingLink ? "rgba(255, 59, 48, 0.9)" : isLevel4 ? "rgba(148, 163, 184, 0.6)" : "rgba(0,0,0,0)";
       }
-      if (!selectedNode) return isLevel4 ? "rgba(52, 199, 89, 0.5)" : "rgba(0,0,0,0)";
+      if (!selectedNode) return isLevel4 ? "rgba(148, 163, 184, 0.6)" : "rgba(0,0,0,0)";
       const connected = src === selectedNode.id || tgt === selectedNode.id;
-      return connected ? "rgba(52, 199, 89, 0.6)" : "rgba(0,0,0,0)";
+      return connected ? "rgba(74, 222, 128, 0.7)" : "rgba(0,0,0,0)";
     },
     [selectedNode, highlightedPairing],
   );
@@ -451,7 +451,7 @@ export default function HomePage() {
     return (
       <div className='flex flex-col items-center justify-center min-h-screen px-6'>
         <div className='w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin' />
-        <p className='mt-4 text-gray-600'>Loading graph data...</p>
+        <p className='mt-4 text-gray-400'>Loading graph data...</p>
       </div>
     );
   }
@@ -459,10 +459,10 @@ export default function HomePage() {
   if (error || !graphData) {
     return (
       <div className='flex flex-col items-center justify-center min-h-screen px-6'>
-        <p className='text-red-600 font-medium'>
+        <p className='text-red-400 font-medium'>
           {error ?? "Failed to load graph data"}
         </p>
-        <p className='mt-2 text-sm text-gray-600'>
+        <p className='mt-2 text-sm text-gray-400'>
           Ensure <code className='font-mono'>data/flavor_pairings.csv</code> or{" "}
           <code className='font-mono'>data/nodes.csv</code> +{" "}
           <code className='font-mono'>edges.csv</code> exist.
@@ -474,26 +474,26 @@ export default function HomePage() {
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
       <aside
-        className={`absolute left-0 top-0 bottom-0 z-10 flex flex-col border-r border-gray-200 bg-white/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
+        className={`absolute left-0 top-0 bottom-0 z-10 flex flex-col border-r border-slate-600 bg-slate-800/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
           sidebarLeftCollapsed ? "w-10" : "w-52"
         }`}
       >
         <button
           type='button'
           onClick={() => setSidebarLeftCollapsed((c) => !c)}
-          className='absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-r-lg border border-l-0 border-gray-200 bg-white/95 shadow-sm hover:bg-gray-50 z-20'
+          className='absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-r-lg border border-l-0 border-slate-600 bg-slate-800/95 shadow-sm hover:bg-slate-700 z-20'
           aria-label={sidebarLeftCollapsed ? "Expand categories" : "Collapse categories"}
         >
-          <span className='text-gray-500 text-xs'>
+          <span className='text-gray-400 text-xs'>
             {sidebarLeftCollapsed ? "▶" : "◀"}
           </span>
         </button>
         {!sidebarLeftCollapsed && (
           <div className='flex-1 flex flex-col min-h-0 overflow-hidden py-4'>
-            <p className='text-xs font-semibold text-gray-600 px-3 py-2'>
+            <p className='text-xs font-semibold text-gray-300 px-3 py-2'>
               Categories
             </p>
-            <div className='flex gap-1 px-2 py-1.5 border-y border-gray-100'>
+            <div className='flex gap-1 px-2 py-1.5 border-y border-slate-600'>
               <button
                 type='button'
                 onClick={() => setHiddenCategories(new Set())}
@@ -501,7 +501,7 @@ export default function HomePage() {
               >
                 Select all
               </button>
-              <span className='text-gray-300'>|</span>
+              <span className='text-slate-400'>|</span>
               <button
                 type='button'
                 onClick={() => setHiddenCategories(new Set(Object.keys(CATEGORY_LABELS)))}
@@ -516,7 +516,7 @@ export default function HomePage() {
                 return (
                   <label
                     key={id}
-                    className='flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer'
+                    className='flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 cursor-pointer'
                   >
                     <input
                       type='checkbox'
@@ -529,14 +529,14 @@ export default function HomePage() {
                           return next;
                         });
                       }}
-                      className='rounded border-gray-300'
+                      className='rounded border-slate-500'
                     />
                     <span
                       className='w-3 h-3 rounded-full shrink-0'
                       style={{ backgroundColor: hashToColor(id) }}
                       aria-hidden
                     />
-                    <span className='text-xs text-gray-700 truncate'>{label}</span>
+                    <span className='text-xs text-gray-300 truncate'>{label}</span>
                   </label>
                 );
               })}
@@ -545,15 +545,15 @@ export default function HomePage() {
         )}
       </aside>
       {selectedNode?.image && (
-        <aside className='absolute left-56 top-20 z-10 w-40 border border-gray-200 bg-white/95 backdrop-blur rounded-lg shadow-xl overflow-hidden'>
-          <div className='aspect-square w-full bg-gray-100'>
+        <aside className='absolute left-56 top-20 z-10 w-40 border border-slate-600 bg-slate-800/95 backdrop-blur rounded-lg shadow-xl overflow-hidden'>
+          <div className='aspect-square w-full bg-slate-700'>
             <img
               src={selectedNode.image}
               alt={selectedNode.name}
               className='w-full h-full object-cover'
             />
           </div>
-          <p className='px-3 py-2 text-sm font-medium text-gray-800 truncate' title={selectedNode.name}>
+          <p className='px-3 py-2 text-sm font-medium text-gray-200 truncate' title={selectedNode.name}>
             {selectedNode.name}
           </p>
         </aside>
@@ -593,7 +593,7 @@ export default function HomePage() {
         />
       </div>
       <div className='flex flex-1 min-h-0 relative'>
-        <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-gray-50 relative w-full h-full'>
+        <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full'>
           {dimensions.width > 0 && dimensions.height > 0 && (
           <ForceGraph2D
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -618,17 +618,17 @@ export default function HomePage() {
           )}
         </div>
         <aside
-          className={`absolute right-0 top-0 bottom-0 z-10 flex flex-col border-l border-gray-200 bg-white/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
+          className={`absolute right-0 top-0 bottom-0 z-10 flex flex-col border-l border-slate-600 bg-slate-800/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
             sidebarRightCollapsed ? "w-10" : "w-56"
           }`}
         >
           <button
             type='button'
             onClick={() => setSidebarRightCollapsed((c) => !c)}
-            className='absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-l-lg border border-r-0 border-gray-200 bg-white/95 shadow-sm hover:bg-gray-50 z-20'
+            className='absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-l-lg border border-r-0 border-slate-600 bg-slate-800/95 shadow-sm hover:bg-slate-700 z-20'
             aria-label={sidebarRightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <span className='text-gray-500 text-xs'>
+            <span className='text-gray-400 text-xs'>
               {sidebarRightCollapsed ? "◀" : "▶"}
             </span>
           </button>
@@ -638,38 +638,38 @@ export default function HomePage() {
                 {highlightedPairing ? (
                   <>
                     <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm pr-2'>
+                      <h2 className='font-bold text-sm pr-2 text-gray-100'>
                         {highlightedPairing.source.name} + {highlightedPairing.target.name}
                       </h2>
                       <button
                         onClick={clearHighlight}
-                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+                        className='text-sm text-gray-400 hover:text-gray-200 shrink-0'
                       >
                         ✕
                       </button>
                     </div>
-                    <p className='text-xs text-gray-600'>
+                    <p className='text-xs text-gray-400'>
                       Suggested pairing from your search
                     </p>
                   </>
                 ) : selectedNode ? (
                   <>
                     <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm truncate pr-2'>{selectedNode.name}</h2>
+                      <h2 className='font-bold text-sm truncate pr-2 text-gray-100'>{selectedNode.name}</h2>
                       <button
                         onClick={() => setSelectedNode(null)}
-                        className='text-sm text-gray-500 hover:text-gray-700 shrink-0'
+                        className='text-sm text-gray-400 hover:text-gray-200 shrink-0'
                       >
                         ✕
                       </button>
                     </div>
-                    <p className='text-xs text-gray-600 mb-2'>Pairs well with:</p>
+                    <p className='text-xs text-gray-400 mb-2'>Pairs well with:</p>
                     {pairingsByCategory.length > 0 ? (
                       <div className='space-y-1'>
                         {pairingsByCategory.map(({ category, label, items }) => {
                           const isExpanded = expandedCategories.has(category);
                           return (
-                            <div key={category} className='border-b border-gray-100 last:border-0'>
+                            <div key={category} className='border-b border-slate-600 last:border-0'>
                               <button
                                 type='button'
                                 onClick={() => {
@@ -680,9 +680,9 @@ export default function HomePage() {
                                     return next;
                                   });
                                 }}
-                                className='w-full flex items-center justify-between py-2 text-left hover:bg-gray-50 rounded px-1 -mx-1'
+                                className='w-full flex items-center justify-between py-2 text-left hover:bg-slate-700 rounded px-1 -mx-1'
                               >
-                                <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
+                                <span className='text-xs font-semibold text-gray-300 uppercase tracking-wide'>
                                   {label}
                                 </span>
                                 <span className='text-gray-400 text-xs'>
@@ -718,7 +718,7 @@ export default function HomePage() {
                         })}
                       </div>
                     ) : (
-                      <p className='text-gray-500 text-xs'>No pairings in dataset</p>
+                      <p className='text-gray-400 text-xs'>No pairings in dataset</p>
                     )}
                   </>
                 ) : (
@@ -728,16 +728,16 @@ export default function HomePage() {
                         type='checkbox'
                         checked={showHolyGrailPanel}
                         onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
-                        className='rounded border-gray-300'
+                        className='rounded border-slate-500'
                       />
-                      <span className='text-xs font-medium text-gray-600'>
+                      <span className='text-xs font-medium text-gray-300'>
                         Holy Grail pairings
                       </span>
                     </label>
                     {showHolyGrailPanel && (
                       <>
-                        <h2 className='font-bold text-sm mb-1'>Holy Grail Pairings</h2>
-                        <p className='text-xs text-gray-500 mb-3'>
+                        <h2 className='font-bold text-sm mb-1 text-gray-100'>Holy Grail Pairings</h2>
+                        <p className='text-xs text-gray-400 mb-3'>
                           Most highly recommended from The Flavor Bible
                         </p>
                         {holyGrailPairings.length > 0 ? (
@@ -746,7 +746,7 @@ export default function HomePage() {
                               <li key={`${source.id}-${target.id}`}>
                                 <button
                                   onClick={() => setSelectedNode(source)}
-                                  className='text-primary font-medium hover:underline text-left text-sm block w-full'
+                                  className='text-sky-200 font-medium hover:text-sky-100 hover:underline text-left text-sm block w-full'
                                 >
                                   {source.name} — {target.name}
                                 </button>

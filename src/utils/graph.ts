@@ -24,13 +24,14 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-export function hashToColor(str: string): string {
+export function hashToColor(str: string, brightForDark = false): string {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
     h = (h << 5) - h + str.charCodeAt(i);
     h |= 0;
   }
   const hue = Math.abs(h) % 360;
+  if (brightForDark) return `hsl(${hue}, 75%, 62%)`;
   return `hsl(${hue}, 65%, 55%)`;
 }
 
