@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { GraphNode, GraphData } from "@/types/graph";
 import { SearchBar } from "@/components/SearchBar";
+import { GeminiKeyModal } from "@/components/GeminiKeyModal";
 import { useSearch } from "@/hooks/useSearch";
 import { forceX, forceY } from "d3-force";
 import {
@@ -190,7 +191,12 @@ export default function HomePage() {
       .sort((a, b) => b.highLevelCount - a.highLevelCount);
   }, [pairingsWithLevel]);
 
-  const search = useSearch(graphDataFiltered.nodes, graphDataFiltered.links);
+  const holyGrailPairStrings = useMemo(
+    () => holyGrailPairings.map(({ source, target }) => `${source.id} + ${target.id}`),
+    [holyGrailPairings],
+  );
+
+  const search = useSearch(graphDataFiltered.nodes, graphDataFiltered.links, holyGrailPairStrings);
 
   useEffect(() => {
     if (!graphData) return;
@@ -522,6 +528,12 @@ export default function HomePage() {
 
   return (
     <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
+      {search.showGeminiKeyModal && (
+        <GeminiKeyModal
+          onSubmit={search.saveGeminiApiKey}
+          onDismiss={search.dismissGeminiKeyModal}
+        />
+      )}
       <aside
         className={`absolute left-0 top-0 bottom-0 z-10 flex flex-col border-r border-slate-600 bg-slate-800/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
           sidebarLeftCollapsed ? "w-10" : "w-52"
@@ -679,6 +691,25 @@ export default function HomePage() {
         useCursor={search.useCursor}
         onUseCursorChange={search.setUseCursor}
         />
+        {search.geminiApiKey ? (
+          <button
+            type='button'
+            onClick={search.clearGeminiApiKey}
+            className='mt-1.5 flex items-center gap-1.5 text-xs text-emerald-400 hover:text-red-400 transition-colors'
+            title='Click to remove saved Gemini API key'
+          >
+            <span className='w-1.5 h-1.5 rounded-full bg-emerald-400' aria-hidden />
+            Gemini AI active · click to remove key
+          </button>
+        ) : (
+          <button
+            type='button'
+            onClick={search.openGeminiKeyModal}
+            className='mt-1.5 text-xs text-gray-500 hover:text-sky-400 transition-colors'
+          >
+            + Add Gemini key for AI search
+          </button>
+        )}
       </div>
       <div className='flex flex-1 min-h-0 relative'>
         <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full'>

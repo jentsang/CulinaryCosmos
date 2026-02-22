@@ -5,6 +5,10 @@
 import type { GraphNode } from "@/types/graph";
 import { hasLinkBetween } from "@/utils/graph";
 import type { GraphLink } from "@/types/graph";
+import { searchWithGeminiClient } from "./geminiClientSearch";
+
+/** Thrown when Gemini is requested but no API key is stored in the browser. */
+export const GEMINI_KEY_REQUIRED = "GEMINI_KEY_REQUIRED";
 
 export type SearchResult =
   | { type: "node"; node: GraphNode }
@@ -96,15 +100,18 @@ export function fuzzyMatchNodes(
 export type SearchProvider = "gemini" | "cursor";
 
 /**
- * Execute search: if fuzzy match found, return node; otherwise call backend API.
- * When LLM returns a node and we can extract a query ingredient with a link between them,
- * returns a pairing result for multi-node highlighting.
+ * Execute search: if fuzzy match found, return node; otherwise call LLM search.
+ * For Gemini, calls the API client-side using the user's own key.
+ * For Cursor, calls the backend /api/search route.
+ * Throws GEMINI_KEY_REQUIRED if provider is "gemini" and no key is provided.
  */
 export async function search(
   query: string,
   nodes: GraphNode[],
   links: GraphLink[],
   provider: SearchProvider = "gemini",
+  geminiApiKey?: string,
+  holyGrailPairs?: string[],
 ): Promise<SearchResult> {
   const trimmed = query.trim();
   if (!trimmed) return { type: "prompt", prompt: "" };
@@ -115,6 +122,27 @@ export async function search(
   if (matched) {
     console.log(LOG, "search: fuzzy match hit, skipping API", { matchedId: matched.id });
     return { type: "node", node: matched };
+  }
+
+  if (provider === "gemini") {
+    if (!geminiApiKey) {
+      throw new Error(GEMINI_KEY_REQUIRED);
+    }
+    const geminiResult = await searchWithGeminiClient(trimmed, nodes, geminiApiKey, holyGrailPairs ?? []);
+    if (geminiResult.error && !geminiResult.node) {
+      throw new Error(geminiResult.error);
+    }
+    if (geminiResult.nodes && geminiResult.nodes.length >= 1) {
+      return { type: "nodes", nodes: geminiResult.nodes };
+    }
+    if (geminiResult.node) {
+      const queryIngredient = extractQueryIngredient(trimmed, nodes);
+      if (queryIngredient && queryIngredient.id !== geminiResult.node.id && hasLinkBetween(queryIngredient.id, geminiResult.node.id, links)) {
+        return { type: "pairing", source: queryIngredient, target: geminiResult.node };
+      }
+      return { type: "node", node: geminiResult.node };
+    }
+    return { type: "prompt", prompt: trimmed };
   }
 
   console.log(LOG, "search: calling API...");
