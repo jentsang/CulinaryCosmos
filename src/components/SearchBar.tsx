@@ -68,7 +68,7 @@ export function SearchBar({
               ) : promptError ? (
                 <span className='text-red-400'>{promptError}</span>
               ) : (
-                "No matches — press Enter to search"
+                "No matches — press Enter to get AI suggestions"
               )}
             </div>
           )}
