@@ -1,10 +1,12 @@
 # Culinary Cosmos
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-culinary--cosmos.vercel.app-black?style=flat&logo=vercel)](https://culinary-cosmos.vercel.app)
+
 An interactive network visualization of flavour pairings, extracted from *[The Flavor Bible](https://www.amazon.com/Flavor-Bible-Essential-Creativity-Imaginative/dp/0316118400)* (Dornenburg & Page, 2008) and powered by AI-assisted ingredient search.
 
-## Main page
+## Screenshot
 
-Culinary Cosmos landing page
+![Culinary Cosmos landing page](public/screenshot.png)
 
 ## Why This Project Matters
 
