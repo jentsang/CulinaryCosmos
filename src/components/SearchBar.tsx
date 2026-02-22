@@ -14,6 +14,9 @@ export interface SearchBarProps {
   promptError?: string | null;
   useCursor?: boolean;
   onUseCursorChange?: (checked: boolean) => void;
+  geminiApiKey?: string;
+  onAddGeminiKey?: () => void;
+  onRemoveGeminiKey?: () => void;
 }
 
 export function SearchBar({
@@ -28,7 +31,12 @@ export function SearchBar({
   promptError = null,
   useCursor = false,
   onUseCursorChange,
+  geminiApiKey,
+  onAddGeminiKey,
+  onRemoveGeminiKey,
 }: SearchBarProps) {
+  const showDropdown = focused && (query.trim() || geminiApiKey !== undefined);
+
   return (
     <div className='absolute top-4 left-4 z-10 w-72'>
       <input
@@ -43,48 +51,60 @@ export function SearchBar({
         }}
         className='w-full px-4 py-2.5 rounded-lg border border-slate-600 bg-slate-800/95 backdrop-blur shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-gray-100 placeholder-gray-400'
       />
-      {focused && query.trim() && (
+      {showDropdown && (
         <div className='absolute top-full left-0 right-0 mt-1 rounded-lg border border-slate-600 bg-slate-800 shadow-lg overflow-hidden max-h-60 overflow-y-auto'>
-          {results.length > 0 ? (
-            results.map((node) => (
-              <button
-                key={node.id}
-                type='button'
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  onSelectNode(node);
-                  onQueryChange("");
-                  onFocusChange(false);
-                }}
-                className='w-full px-4 py-2.5 text-left text-sm text-gray-100 hover:bg-slate-700 border-b border-slate-600 last:border-0'
-              >
-                {node.name}
-              </button>
-            ))
+          {query.trim() && (
+            results.length > 0 ? (
+              results.map((node) => (
+                <button
+                  key={node.id}
+                  type='button'
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onSelectNode(node);
+                    onQueryChange("");
+                    onFocusChange(false);
+                  }}
+                  className='w-full px-4 py-2.5 text-left text-sm text-gray-100 hover:bg-slate-700 border-b border-slate-600 last:border-0'
+                >
+                  {node.name}
+                </button>
+              ))
+            ) : (
+              <div className='px-4 py-3 text-sm text-gray-400 border-b border-slate-600'>
+                {isSearching ? (
+                  "Searching..."
+                ) : promptError ? (
+                  <span className='text-red-400'>{promptError}</span>
+                ) : (
+                  "No matches — press Enter to get AI suggestions"
+                )}
+              </div>
+            )
+          )}
+          {geminiApiKey ? (
+            <button
+              type='button'
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onRemoveGeminiKey}
+              className='w-full px-4 py-2.5 text-left text-xs text-emerald-400 hover:bg-slate-700 flex items-center gap-2'
+            >
+              <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0' aria-hidden />
+              Gemini AI active · click to remove key
+            </button>
           ) : (
-            <div className='px-4 py-3 text-sm text-gray-400'>
-              {isSearching ? (
-                "Searching..."
-              ) : promptError ? (
-                <span className='text-red-400'>{promptError}</span>
-              ) : (
-                "No matches — press Enter to get AI suggestions"
-              )}
-            </div>
+            <button
+              type='button'
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onAddGeminiKey}
+              className='w-full px-4 py-2.5 text-left text-xs text-sky-400 hover:bg-slate-700 flex items-center gap-1.5'
+            >
+              <span aria-hidden>✦</span>
+              Add Gemini key for AI search
+            </button>
           )}
         </div>
       )}
-      {/* {onUseCursorChange && (
-        <label className='flex items-center gap-2 mt-2 text-xs text-gray-600 cursor-pointer'>
-          <input
-            type='checkbox'
-            checked={useCursor}
-            onChange={(e) => onUseCursorChange(e.target.checked)}
-            className='rounded border-gray-300 text-primary focus:ring-primary'
-          />
-          Use Cursor Cloud Agents
-        </label>
-      )} */}
     </div>
   );
 }

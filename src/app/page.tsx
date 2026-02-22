@@ -690,26 +690,10 @@ export default function HomePage() {
         promptError={search.promptError}
         useCursor={search.useCursor}
         onUseCursorChange={search.setUseCursor}
+        geminiApiKey={search.geminiApiKey || undefined}
+        onAddGeminiKey={search.openGeminiKeyModal}
+        onRemoveGeminiKey={search.clearGeminiApiKey}
         />
-        {search.geminiApiKey ? (
-          <button
-            type='button'
-            onClick={search.clearGeminiApiKey}
-            className='mt-1.5 flex items-center gap-1.5 text-xs text-emerald-400 hover:text-red-400 transition-colors'
-            title='Click to remove saved Gemini API key'
-          >
-            <span className='w-1.5 h-1.5 rounded-full bg-emerald-400' aria-hidden />
-            Gemini AI active · click to remove key
-          </button>
-        ) : (
-          <button
-            type='button'
-            onClick={search.openGeminiKeyModal}
-            className='mt-1.5 text-xs text-gray-500 hover:text-sky-400 transition-colors'
-          >
-            + Add Gemini key for AI search
-          </button>
-        )}
       </div>
       <div className='flex flex-1 min-h-0 relative'>
         <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full'>
