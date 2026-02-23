@@ -7,15 +7,12 @@ import { SearchBar } from "@/components/SearchBar";
 import { GeminiKeyModal } from "@/components/GeminiKeyModal";
 import { useSearch } from "@/hooks/useSearch";
 import { useGraphData } from "@/hooks/useGraphData";
-import { forceX, forceY } from "d3-force";
 import {
   hashToColor,
   hasLinkBetween,
   getPairingsWithLevel,
   spreadNodesByCategory,
   CATEGORY_LABELS,
-  getCategoryCenter,
-  getCategoryIndex,
 } from "@/utils/graph";
 import { saveNode, unsaveNode, isNodeSaved } from "@/services/recipeStorage";
 import { CategorySidebar } from "./_components/CategorySidebar";
@@ -31,23 +28,21 @@ const NODE_COLORS = ["#3B82F6", "#22C55E", "#F97316", "#A855F7"];
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<
-    | {
-        d3Force: (name: string, fn?: unknown) => unknown;
-        d3ReheatSimulation?: () => void;
-      }
+    | { centerAt?: (x: number, y: number, ms?: number) => void; zoom?: (k: number, ms?: number) => void; zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void }
     | undefined
   >(undefined);
 
   const { graphData: rawGraphData, loading, error } = useGraphData();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
 
-  // Spread nodes by category once on initial load
+  // Spread nodes by category once on initial load and immediately pin them (fx/fy)
+  // so the D3 simulation never moves them.
   useEffect(() => {
     if (!rawGraphData) return;
-    setGraphData({
-      nodes: spreadNodesByCategory(rawGraphData.nodes as GraphNode[]),
-      links: rawGraphData.links,
-    });
+    const spread = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]);
+    const pinned = spread.map((n) => ({ ...n, fx: n.x, fy: n.y }));
+    setGraphData({ nodes: pinned, links: rawGraphData.links });
+    settledRef.current = true;
   }, [rawGraphData]);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -56,7 +51,7 @@ export default function HomePage() {
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [sidebarLeftCollapsed, setSidebarLeftCollapsed] = useState(false);
   const [sidebarRightCollapsed, setSidebarRightCollapsed] = useState(false);
-  const prevNodeCountRef = useRef(0);
+  const settledRef = useRef(false);
   const [isSelectedNodeSaved, setIsSelectedNodeSaved] = useState(false);
 
   useEffect(() => {
@@ -268,14 +263,17 @@ export default function HomePage() {
   const nodeValFn = useCallback(
     (node: unknown) => {
       const n = node as GraphNode;
-      const isHighlighted = highlightedNodeIds.has(n.id ?? "");
-      const isSelected = selectedNode && n.id === selectedNode.id;
-      if (isHighlighted || isSelected) return 12;
       const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
-      return 3 + 9 * (degree / maxDegreeFull);
+      return 1 + 20 * (degree / maxDegreeFull);
     },
-    [selectedNode, highlightedNodeIds, nodeDegreesFull, maxDegreeFull],
+    [nodeDegreesFull, maxDegreeFull],
   );
+
+  // Build a stable node-category lookup so linkVisibilityFn can filter hidden nodes.
+  const nodeCategoryMap = useMemo(() => {
+    if (!graphData) return new Map<string, string>();
+    return new Map(graphData.nodes.map((n) => [n.id, n.category ?? "other"]));
+  }, [graphData]);
 
   const linkVisibilityFn = useCallback(
     (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
@@ -289,6 +287,12 @@ export default function HomePage() {
         typeof link.target === "string"
           ? link.target
           : (link.target as { id?: string })?.id;
+      // Hide links connected to nodes in hidden categories
+      if (
+        hiddenCategories.has(nodeCategoryMap.get(src ?? "") ?? "") ||
+        hiddenCategories.has(nodeCategoryMap.get(tgt ?? "") ?? "")
+      )
+        return false;
       if (highlightedNodes.length > 0) {
         return (
           (highlightedNodeIds.has(src ?? "") && highlightedNodeIds.has(tgt ?? "")) ||
@@ -298,7 +302,7 @@ export default function HomePage() {
       if (!selectedNode) return isLevel4;
       return src === selectedNode.id || tgt === selectedNode.id;
     },
-    [selectedNode, highlightedNodes.length, highlightedNodeIds],
+    [selectedNode, highlightedNodes.length, highlightedNodeIds, hiddenCategories, nodeCategoryMap],
   );
 
   const linkColorFn = useCallback(
@@ -361,10 +365,22 @@ export default function HomePage() {
     [],
   );
 
-  // Add synthetic dotted links between multi-highlighted nodes with no existing pairing
-  const graphDataWithSyntheticLinks = useMemo(() => {
-    const { nodes, links } = graphDataFiltered;
-    if (highlightedNodes.length < 2) return { nodes, links };
+  // nodeVisibility: hide nodes whose category is toggled off.
+  // This replaces filtering graphData (which would restart the simulation).
+  const nodeVisibilityFn = useCallback(
+    (node: unknown) => {
+      const n = node as GraphNode;
+      return !hiddenCategories.has(n.category ?? "other");
+    },
+    [hiddenCategories],
+  );
+
+  // Add synthetic dotted links between multi-highlighted nodes with no existing pairing.
+  // Always based on the full graphData so the data reference never changes on category toggles.
+  const graphDataForDisplay = useMemo(() => {
+    if (!graphData) return { nodes: [], links: [] };
+    if (highlightedNodes.length < 2) return graphData;
+    const { links } = graphData;
     const syntheticLinks: { source: string; target: string; isSynthetic?: boolean }[] = [];
     for (let i = 0; i < highlightedNodes.length; i++) {
       for (let j = i + 1; j < highlightedNodes.length; j++) {
@@ -375,109 +391,19 @@ export default function HomePage() {
         }
       }
     }
-    return { nodes, links: [...links, ...syntheticLinks] };
-  }, [graphDataFiltered, highlightedNodes]);
+    return { nodes: graphData.nodes, links: [...links, ...syntheticLinks] };
+  }, [graphData, highlightedNodes]);
 
   const hasSyntheticLinks =
-    graphDataWithSyntheticLinks.links.length > graphDataFiltered.links.length;
+    graphDataForDisplay.links.length > (graphData?.links.length ?? 0);
 
-  // Apply D3 force layout settings after graph data changes
-  useEffect(() => {
-    const nodeCount = graphDataFiltered.nodes.length;
-    if (nodeCount === 0) {
-      prevNodeCountRef.current = 0;
-      return;
-    }
-    const id = setTimeout(() => {
-      const fg = graphRef.current;
-      if (!fg) return;
-      const numCategories = Object.keys(CATEGORY_LABELS).length;
-      const positionStrength = (node: unknown) => {
-        const n = node as GraphNode;
-        const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
-        return degree <= 1 ? 0.12 : 0.04;
-      };
-      fg.d3Force(
-        "x",
-        forceX((d: unknown) => {
-          const n = d as GraphNode;
-          return getCategoryCenter(getCategoryIndex(n.category), numCategories).x;
-        }).strength(
-          positionStrength as (n: unknown, i: number, nodes: unknown[]) => number,
-        ),
-      );
-      fg.d3Force(
-        "y",
-        forceY((d: unknown) => {
-          const n = d as GraphNode;
-          return getCategoryCenter(getCategoryIndex(n.category), numCategories).y;
-        }).strength(
-          positionStrength as (n: unknown, i: number, nodes: unknown[]) => number,
-        ),
-      );
-      const charge = fg.d3Force("charge") as {
-        strength?: (
-          v: number | ((n: unknown, i: number, nodes: unknown[]) => number),
-        ) => unknown;
-      };
-      if (charge?.strength) {
-        charge.strength((node: unknown) => {
-          const n = node as { id?: string };
-          const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
-          return -12 + -36 * (degree / maxDegreeFull);
-        });
-      }
-      const link = fg.d3Force("link") as {
-        distance?: (v: number) => unknown;
-        strength?: (
-          v: number | ((l: unknown, i: number, links: unknown[]) => number),
-        ) => unknown;
-      };
-      if (link?.distance) link.distance(55);
-      if (link?.strength) {
-        link.strength((l: unknown) => {
-          const linkObj = l as {
-            source?: { id?: string } | string;
-            target?: { id?: string } | string;
-            isSynthetic?: boolean;
-          };
-          if (linkObj.isSynthetic) return 0;
-          const srcId =
-            typeof linkObj.source === "string"
-              ? linkObj.source
-              : (linkObj.source?.id ?? "");
-          const tgtId =
-            typeof linkObj.target === "string"
-              ? linkObj.target
-              : (linkObj.target?.id ?? "");
-          const d1 = nodeDegreesFull.get(srcId) ?? 0;
-          const d2 = nodeDegreesFull.get(tgtId) ?? 0;
-          return 0.5 + 0.1 * Math.pow((d1 + d2) / 2 / maxDegreeFull, 1.2);
-        });
-      }
-      // Only reheat on first load, not on category filter toggles
-      if (prevNodeCountRef.current === 0 && nodeCount > 0) {
-        fg.d3ReheatSimulation?.();
-      }
-      prevNodeCountRef.current = nodeCount;
-    }, 0);
-    return () => clearTimeout(id);
-  }, [graphDataFiltered, nodeDegreesFull, maxDegreeFull]);
 
   // Zoom/pan to selected or highlighted nodes
   useEffect(() => {
-    if (!graphRef.current || !graphDataFiltered.nodes.length) return;
     const fg = graphRef.current;
+    if (!fg || !graphDataFiltered.nodes.length) return;
     if (highlightedNodes.length > 0) {
-      (
-        fg as {
-          zoomToFit?: (
-            ms?: number,
-            padding?: number,
-            nodeFilter?: (n: unknown) => boolean,
-          ) => void;
-        }
-      ).zoomToFit?.(400, 50, (node) =>
+      fg.zoomToFit?.(400, 50, (node) =>
         highlightedNodeIds.has((node as GraphNode).id ?? ""),
       );
       return;
@@ -486,21 +412,10 @@ export default function HomePage() {
       const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
       const n = (node ?? selectedNode) as { x?: number; y?: number };
       if (typeof n.x === "number" && typeof n.y === "number") {
-        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(
-          n.x,
-          n.y,
-          400,
-        );
-        (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
+        fg.centerAt?.(n.x, n.y, 400);
+        fg.zoom?.(4, 400);
       }
-      return;
     }
-    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(
-      0,
-      0,
-      400,
-    );
-    (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(1.0, 400);
   }, [selectedNode, highlightedNodes]);
 
   if (loading) {
@@ -623,7 +538,8 @@ export default function HomePage() {
             <ForceGraph2D
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               ref={graphRef as any}
-              graphData={graphDataWithSyntheticLinks}
+              graphData={graphDataForDisplay}
+              nodeVisibility={nodeVisibilityFn}
               width={dimensions.width}
               height={dimensions.height}
               nodeLabel={(node) => (node as GraphNode).name}
@@ -637,9 +553,7 @@ export default function HomePage() {
               linkDirectionalParticles={0}
               onNodeClick={handleNodeClick}
               onBackgroundClick={clearHighlight}
-              cooldownTicks={800}
-              d3AlphaDecay={0.018}
-              d3VelocityDecay={0.7}
+              cooldownTicks={0}
             />
           )}
         </div>
