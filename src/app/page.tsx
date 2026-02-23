@@ -19,7 +19,7 @@ import { CategorySidebar } from "./_components/CategorySidebar";
 import { NodeDetailsSidebar } from "./_components/NodeDetailsSidebar";
 import { NodeImageCard } from "./_components/NodeImageCard";
 
-const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
   ssr: false,
 });
 
@@ -29,8 +29,11 @@ export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<
     | {
-        centerAt?: (x: number, y: number, ms?: number) => void;
-        zoom?: (k: number, ms?: number) => void;
+        cameraPosition?: (
+          position: { x?: number; y?: number; z?: number },
+          lookAt?: { x?: number; y?: number; z?: number },
+          transitionMs?: number,
+        ) => void;
         zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void;
         d3Force?: (name: string, fn?: unknown) => unknown;
       }
@@ -40,13 +43,12 @@ export default function HomePage() {
   const { graphData: rawGraphData, loading, error } = useGraphData();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
 
-  // Spread nodes, resolve overlaps in pure JS, then pin — no simulation drift.
+  // Spread nodes in 3D, resolve overlaps, then pin — no simulation drift.
   useEffect(() => {
     if (!rawGraphData) return;
-    const nodes = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]) as (GraphNode & { x: number; y: number })[];
+    const nodes = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]) as (GraphNode & { x: number; y: number; z: number })[];
 
-    // Iterative collision resolution with a random perpendicular nudge so nodes
-    // slip sideways past each other instead of forming a uniform grid.
+    // Iterative 3D collision resolution.
     const COLLISION_R = 6;
     const ITERS = 20;
     for (let iter = 0; iter < ITERS; iter++) {
@@ -56,26 +58,28 @@ export default function HomePage() {
           const b = nodes[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const distSq = dx * dx + dy * dy;
+          const dz = b.z - a.z;
+          const distSq = dx * dx + dy * dy + dz * dz;
           const minDist = COLLISION_R * 2;
           if (distSq < minDist * minDist && distSq > 0) {
             const dist = Math.sqrt(distSq);
             const pushAmt = (minDist - dist) * 0.02;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Perpendicular direction; random sign makes nodes slide organically
-            const perp = (Math.random() - 0.5) * pushAmt * 0.3;
-            a.x -= nx * pushAmt + (-ny) * perp;
-            a.y -= ny * pushAmt +   nx  * perp;
-            b.x += nx * pushAmt - (-ny) * perp;
-            b.y += ny * pushAmt -   nx  * perp;
+            const nz = dz / dist;
+            a.x -= nx * pushAmt;
+            a.y -= ny * pushAmt;
+            a.z -= nz * pushAmt;
+            b.x += nx * pushAmt;
+            b.y += ny * pushAmt;
+            b.z += nz * pushAmt;
           }
         }
       }
     }
 
-    // Pin every node so ForceGraph2D never moves them.
-    const pinned = nodes.map((n) => ({ ...n, fx: n.x, fy: n.y }));
+    // Pin every node so ForceGraph3D never moves them.
+    const pinned = nodes.map((n) => ({ ...n, fx: n.x, fy: n.y, fz: n.z }));
     settledRef.current = true;
     setGraphData({ nodes: pinned, links: rawGraphData.links });
   }, [rawGraphData]);
@@ -257,7 +261,7 @@ export default function HomePage() {
   }, [graphData]);
 
   const handleNodeClick = useCallback(
-    (node: { id?: string | number; name?: string; x?: number; y?: number } | null) => {
+    (node: { id?: string | number; name?: string; x?: number; y?: number; z?: number } | null) => {
       if (!node || !graphDataFiltered.nodes.length) {
         clearHighlight();
         return;
@@ -392,13 +396,6 @@ export default function HomePage() {
     [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
-  const linkLineDashFn = useCallback(
-    (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
-      if ((link as { isSynthetic?: boolean }).isSynthetic) return [4, 4];
-      return null;
-    },
-    [],
-  );
 
   // nodeVisibility: hide nodes whose category is toggled off.
   // This replaces filtering graphData (which would restart the simulation).
@@ -433,22 +430,26 @@ export default function HomePage() {
     graphDataForDisplay.links.length > (graphData?.links.length ?? 0);
 
 
-  // Zoom/pan to selected or highlighted nodes
+  // Camera navigation to selected or highlighted nodes
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg || !graphDataFiltered.nodes.length) return;
     if (highlightedNodes.length > 0) {
-      fg.zoomToFit?.(400, 50, (node) =>
+      fg.zoomToFit?.(400, 80, (node) =>
         highlightedNodeIds.has((node as GraphNode).id ?? ""),
       );
       return;
     }
     if (selectedNode) {
       const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
-      const n = (node ?? selectedNode) as { x?: number; y?: number };
-      if (typeof n.x === "number" && typeof n.y === "number") {
-        fg.centerAt?.(n.x, n.y, 400);
-        fg.zoom?.(4, 400);
+      const n = (node ?? selectedNode) as { x?: number; y?: number; z?: number };
+      if (typeof n.x === "number" && typeof n.y === "number" && typeof n.z === "number") {
+        // Pull camera 80 units back from the node along the current viewing axis
+        fg.cameraPosition?.(
+          { x: n.x, y: n.y, z: n.z + 80 },
+          { x: n.x, y: n.y, z: n.z },
+          400,
+        );
       }
     }
   }, [selectedNode, highlightedNodes]);
@@ -570,7 +571,7 @@ export default function HomePage() {
           className="flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full"
         >
           {dimensions.width > 0 && dimensions.height > 0 && (
-            <ForceGraph2D
+            <ForceGraph3D
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               ref={graphRef as any}
               graphData={graphDataForDisplay}
@@ -584,11 +585,11 @@ export default function HomePage() {
               linkVisibility={linkVisibilityFn}
               linkColor={linkColorFn}
               linkWidth={linkWidthFn}
-              linkLineDash={linkLineDashFn}
               linkDirectionalParticles={0}
               onNodeClick={handleNodeClick}
               onBackgroundClick={clearHighlight}
               cooldownTicks={0}
+              backgroundColor="#0f172a"
             />
           )}
         </div>
