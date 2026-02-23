@@ -650,8 +650,17 @@ export default function HomePage() {
           </p>
         </aside>
       ) : null}
+      <a
+        href='/cookbook'
+        className={`absolute top-4 z-20 transition-[right] duration-200 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 ${
+          sidebarRightCollapsed ? "right-[72px]" : "right-64"
+        }`}
+      >
+        <span>📖</span>
+        <span>Cookbook</span>
+      </a>
       <div
-        className={`absolute top-4 z-20 transition-[left] duration-200 ${
+        className={`absolute top-0 z-20 transition-[left] duration-200 ${
           sidebarLeftCollapsed ? "left-14" : "left-56"
         }`}
       >
