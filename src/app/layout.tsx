@@ -13,8 +13,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="overflow-hidden">
-      <body className="antialiased min-h-screen min-w-full overflow-hidden bg-slate-900 text-gray-100">
-        <main className="h-screen w-full overflow-hidden">{children}</main>
+      <body className="antialiased h-screen w-full overflow-hidden bg-slate-900 text-gray-100">
+        {children}
       </body>
     </html>
   );

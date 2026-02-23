@@ -38,7 +38,7 @@ export function SearchBar({
   const showDropdown = focused && (query.trim() || geminiApiKey !== undefined);
 
   return (
-    <div className='absolute top-4 left-4 z-10 w-72'>
+    <div className='relative w-72'>
       <input
         type='text'
         placeholder='Search flavours...'

@@ -6,6 +6,7 @@ import type { GraphNode, GraphData } from "@/types/graph";
 import { SearchBar } from "@/components/SearchBar";
 import { GeminiKeyModal } from "@/components/GeminiKeyModal";
 import { useSearch } from "@/hooks/useSearch";
+import { useGraphData } from "@/hooks/useGraphData";
 import { forceX, forceY } from "d3-force";
 import {
   hashToColor,
@@ -16,6 +17,10 @@ import {
   getCategoryCenter,
   getCategoryIndex,
 } from "@/utils/graph";
+import { saveNode, unsaveNode, isNodeSaved } from "@/services/recipeStorage";
+import { CategorySidebar } from "./_components/CategorySidebar";
+import { NodeDetailsSidebar } from "./_components/NodeDetailsSidebar";
+import { NodeImageCard } from "./_components/NodeImageCard";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
@@ -32,47 +37,47 @@ export default function HomePage() {
       }
     | undefined
   >(undefined);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const { graphData: rawGraphData, loading, error } = useGraphData();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Spread nodes by category once on initial load
+  useEffect(() => {
+    if (!rawGraphData) return;
+    setGraphData({
+      nodes: spreadNodesByCategory(rawGraphData.nodes as GraphNode[]),
+      links: rawGraphData.links,
+    });
+  }, [rawGraphData]);
+
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [highlightedNodes, setHighlightedNodes] = useState<GraphNode[]>([]);
-  const [showHolyGrailPanel, setShowHolyGrailPanel] = useState(true);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [sidebarLeftCollapsed, setSidebarLeftCollapsed] = useState(false);
   const [sidebarRightCollapsed, setSidebarRightCollapsed] = useState(false);
   const prevNodeCountRef = useRef(0);
+  const [isSelectedNodeSaved, setIsSelectedNodeSaved] = useState(false);
 
   useEffect(() => {
-    fetch("/api/graph-data")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load graph data");
-        return res.json();
-      })
-      .then((data) => {
-        const nodes = spreadNodesByCategory(data.nodes as GraphNode[]);
-        setGraphData({ nodes, links: data.links });
-        setError(null);
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to load graph data",
-        );
-        setGraphData(null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setExpandedCategories(new Set());
-  }, [selectedNode?.id, highlightedNodes]);
+    setIsSelectedNodeSaved(selectedNode ? isNodeSaved(selectedNode.id) : false);
+  }, [selectedNode?.id]);
 
   const clearHighlight = useCallback(() => {
     setSelectedNode(null);
     setHighlightedNodes([]);
   }, []);
+
+  const handleToggleSaveNode = useCallback(() => {
+    if (!selectedNode) return;
+    if (isSelectedNodeSaved) {
+      unsaveNode(selectedNode.id);
+      setIsSelectedNodeSaved(false);
+    } else {
+      saveNode(selectedNode.id, selectedNode.name, selectedNode.category);
+      setIsSelectedNodeSaved(true);
+    }
+  }, [selectedNode, isSelectedNodeSaved]);
 
   const highlightedNodeIds = useMemo(
     () => new Set(highlightedNodes.map((n) => n.id)),
@@ -104,30 +109,29 @@ export default function HomePage() {
     return { nodes, links };
   }, [graphData, hiddenCategories]);
 
-  const { nodeDegrees: nodeDegreesFull, maxDegree: maxDegreeFull } =
-    useMemo(() => {
-      if (!graphData) return { nodeDegrees: new Map<string, number>(), maxDegree: 1 };
-      const degrees = new Map<string, number>();
-      for (const link of graphData.links) {
-        const src =
-          typeof link.source === "string"
-            ? link.source
-            : (link.source as { id?: string })?.id ?? "";
-        const tgt =
-          typeof link.target === "string"
-            ? link.target
-            : (link.target as { id?: string })?.id ?? "";
-        degrees.set(src, (degrees.get(src) ?? 0) + 1);
-        degrees.set(tgt, (degrees.get(tgt) ?? 0) + 1);
-      }
-      const max = Math.max(1, ...degrees.values());
-      return { nodeDegrees: degrees, maxDegree: max };
-    }, [graphData]);
+  const { nodeDegrees: nodeDegreesFull, maxDegree: maxDegreeFull } = useMemo(() => {
+    if (!graphData) return { nodeDegrees: new Map<string, number>(), maxDegree: 1 };
+    const degrees = new Map<string, number>();
+    for (const link of graphData.links) {
+      const src =
+        typeof link.source === "string"
+          ? link.source
+          : (link.source as { id?: string })?.id ?? "";
+      const tgt =
+        typeof link.target === "string"
+          ? link.target
+          : (link.target as { id?: string })?.id ?? "";
+      degrees.set(src, (degrees.get(src) ?? 0) + 1);
+      degrees.set(tgt, (degrees.get(tgt) ?? 0) + 1);
+    }
+    const max = Math.max(1, ...degrees.values());
+    return { nodeDegrees: degrees, maxDegree: max };
+  }, [graphData]);
 
+  // Deselect node if its category is hidden
   useEffect(() => {
     if (!selectedNode || !graphDataFiltered.nodes.length) return;
-    const stillVisible = graphDataFiltered.nodes.some((n) => n.id === selectedNode.id);
-    if (!stillVisible) {
+    if (!graphDataFiltered.nodes.some((n) => n.id === selectedNode.id)) {
       setSelectedNode(null);
       setHighlightedNodes([]);
     }
@@ -146,29 +150,6 @@ export default function HomePage() {
     () => pairingsWithLevel.map((p) => p.node),
     [pairingsWithLevel],
   );
-
-  const holyGrailPairings = useMemo(() => {
-    if (!graphDataFiltered.nodes.length) return [];
-    const nodeMap = new Map(graphDataFiltered.nodes.map((n) => [n.id, n]));
-    return graphDataFiltered.links
-      .filter((link) => (link as { value?: number }).value === 4)
-      .map((link) => {
-        const src =
-          typeof link.source === "string"
-            ? link.source
-            : (link.source as { id?: string })?.id ?? "";
-        const tgt =
-          typeof link.target === "string"
-            ? link.target
-            : (link.target as { id?: string })?.id ?? "";
-        const srcNode = nodeMap.get(src);
-        const tgtNode = nodeMap.get(tgt);
-        return srcNode && tgtNode
-          ? { source: srcNode, target: tgtNode }
-          : null;
-      })
-      .filter((p): p is { source: GraphNode; target: GraphNode } => p !== null);
-  }, [graphDataFiltered]);
 
   const pairingsByCategory = useMemo(() => {
     const groups = new Map<string, { node: GraphNode; level: number }[]>();
@@ -191,13 +172,39 @@ export default function HomePage() {
       .sort((a, b) => b.highLevelCount - a.highLevelCount);
   }, [pairingsWithLevel]);
 
+  const holyGrailPairings = useMemo(() => {
+    if (!graphDataFiltered.nodes.length) return [];
+    const nodeMap = new Map(graphDataFiltered.nodes.map((n) => [n.id, n]));
+    return graphDataFiltered.links
+      .filter((link) => (link as { value?: number }).value === 4)
+      .map((link) => {
+        const src =
+          typeof link.source === "string"
+            ? link.source
+            : (link.source as { id?: string })?.id ?? "";
+        const tgt =
+          typeof link.target === "string"
+            ? link.target
+            : (link.target as { id?: string })?.id ?? "";
+        const srcNode = nodeMap.get(src);
+        const tgtNode = nodeMap.get(tgt);
+        return srcNode && tgtNode ? { source: srcNode, target: tgtNode } : null;
+      })
+      .filter((p): p is { source: GraphNode; target: GraphNode } => p !== null);
+  }, [graphDataFiltered]);
+
   const holyGrailPairStrings = useMemo(
     () => holyGrailPairings.map(({ source, target }) => `${source.id} + ${target.id}`),
     [holyGrailPairings],
   );
 
-  const search = useSearch(graphDataFiltered.nodes, graphDataFiltered.links, holyGrailPairStrings);
+  const search = useSearch(
+    graphDataFiltered.nodes,
+    graphDataFiltered.links,
+    holyGrailPairStrings,
+  );
 
+  // Resize observer for graph container
   useEffect(() => {
     if (!graphData) return;
     const el = containerRef.current;
@@ -220,14 +227,7 @@ export default function HomePage() {
   }, [graphData]);
 
   const handleNodeClick = useCallback(
-    (
-      node: {
-        id?: string | number;
-        name?: string;
-        x?: number;
-        y?: number;
-      } | null,
-    ) => {
+    (node: { id?: string | number; name?: string; x?: number; y?: number } | null) => {
       if (!node || !graphDataFiltered.nodes.length) {
         clearHighlight();
         return;
@@ -290,9 +290,10 @@ export default function HomePage() {
           ? link.target
           : (link.target as { id?: string })?.id;
       if (highlightedNodes.length > 0) {
-        const srcHighlighted = highlightedNodeIds.has(src ?? "");
-        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
-        return (srcHighlighted && tgtHighlighted) || isLevel4;
+        return (
+          (highlightedNodeIds.has(src ?? "") && highlightedNodeIds.has(tgt ?? "")) ||
+          isLevel4
+        );
       }
       if (!selectedNode) return isLevel4;
       return src === selectedNode.id || tgt === selectedNode.id;
@@ -301,9 +302,7 @@ export default function HomePage() {
   );
 
   const linkColorFn = useCallback(
-    (
-      link: { source?: unknown; target?: unknown } & Record<string, unknown>,
-    ) => {
+    (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
       const val = link.value as number | undefined;
       const isLevel4 = val === 4;
       const src =
@@ -315,16 +314,14 @@ export default function HomePage() {
           ? link.target
           : (link.target as { id?: string })?.id;
       if (highlightedNodes.length > 0) {
-        const srcHighlighted = highlightedNodeIds.has(src ?? "");
-        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
-        if (srcHighlighted && tgtHighlighted) {
+        const srcH = highlightedNodeIds.has(src ?? "");
+        const tgtH = highlightedNodeIds.has(tgt ?? "");
+        if (srcH && tgtH) {
           return (link as { isSynthetic?: boolean }).isSynthetic
             ? "rgba(59, 130, 246, 0.9)"
             : "rgba(255, 59, 48, 0.9)";
         }
-        return isLevel4
-            ? "rgba(148, 163, 184, 0.6)"
-            : "rgba(0,0,0,0)";
+        return isLevel4 ? "rgba(148, 163, 184, 0.6)" : "rgba(0,0,0,0)";
       }
       if (!selectedNode) return isLevel4 ? "rgba(148, 163, 184, 0.6)" : "rgba(0,0,0,0)";
       const connected = src === selectedNode.id || tgt === selectedNode.id;
@@ -334,9 +331,7 @@ export default function HomePage() {
   );
 
   const linkWidthFn = useCallback(
-    (
-      link: { source?: unknown; target?: unknown } & Record<string, unknown>,
-    ) => {
+    (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
       const val = link.value as number | undefined;
       const isLevel4 = val === 4;
       const src =
@@ -348,9 +343,9 @@ export default function HomePage() {
           ? link.target
           : (link.target as { id?: string })?.id;
       if (highlightedNodes.length > 0) {
-        const srcHighlighted = highlightedNodeIds.has(src ?? "");
-        const tgtHighlighted = highlightedNodeIds.has(tgt ?? "");
-        return srcHighlighted && tgtHighlighted ? 3 : isLevel4 ? 1 : 0;
+        const srcH = highlightedNodeIds.has(src ?? "");
+        const tgtH = highlightedNodeIds.has(tgt ?? "");
+        return srcH && tgtH ? 3 : isLevel4 ? 1 : 0;
       }
       if (!selectedNode) return isLevel4 ? 1 : 0;
       return src === selectedNode.id || tgt === selectedNode.id ? 2.5 : 1;
@@ -366,11 +361,10 @@ export default function HomePage() {
     [],
   );
 
-  // When Gemini returns multiple ingredients with no existing pairing, add synthetic dotted links.
+  // Add synthetic dotted links between multi-highlighted nodes with no existing pairing
   const graphDataWithSyntheticLinks = useMemo(() => {
     const { nodes, links } = graphDataFiltered;
     if (highlightedNodes.length < 2) return { nodes, links };
-
     const syntheticLinks: { source: string; target: string; isSynthetic?: boolean }[] = [];
     for (let i = 0; i < highlightedNodes.length; i++) {
       for (let j = i + 1; j < highlightedNodes.length; j++) {
@@ -381,19 +375,13 @@ export default function HomePage() {
         }
       }
     }
-    return {
-      nodes,
-      links: [...links, ...syntheticLinks],
-    };
+    return { nodes, links: [...links, ...syntheticLinks] };
   }, [graphDataFiltered, highlightedNodes]);
 
-  const graphDataStable = useMemo(
-    () => graphDataWithSyntheticLinks,
-    [graphDataWithSyntheticLinks],
-  );
+  const hasSyntheticLinks =
+    graphDataWithSyntheticLinks.links.length > graphDataFiltered.links.length;
 
-  const hasSyntheticLinks = graphDataWithSyntheticLinks.links.length > graphDataFiltered.links.length;
-
+  // Apply D3 force layout settings after graph data changes
   useEffect(() => {
     const nodeCount = graphDataFiltered.nodes.length;
     if (nodeCount === 0) {
@@ -403,10 +391,7 @@ export default function HomePage() {
     const id = setTimeout(() => {
       const fg = graphRef.current;
       if (!fg) return;
-
       const numCategories = Object.keys(CATEGORY_LABELS).length;
-      // Stronger pull toward category center for low-degree/isolated nodes so they aren't
-      // pushed far out by repulsion from the main graph clump.
       const positionStrength = (node: unknown) => {
         const n = node as GraphNode;
         const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
@@ -416,57 +401,61 @@ export default function HomePage() {
         "x",
         forceX((d: unknown) => {
           const n = d as GraphNode;
-          const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
-          return center.x;
-        }).strength(positionStrength as (n: unknown, i: number, nodes: unknown[]) => number),
+          return getCategoryCenter(getCategoryIndex(n.category), numCategories).x;
+        }).strength(
+          positionStrength as (n: unknown, i: number, nodes: unknown[]) => number,
+        ),
       );
       fg.d3Force(
         "y",
         forceY((d: unknown) => {
           const n = d as GraphNode;
-          const center = getCategoryCenter(getCategoryIndex(n.category), numCategories);
-          return center.y;
-        }).strength(positionStrength as (n: unknown, i: number, nodes: unknown[]) => number),
+          return getCategoryCenter(getCategoryIndex(n.category), numCategories).y;
+        }).strength(
+          positionStrength as (n: unknown, i: number, nodes: unknown[]) => number,
+        ),
       );
-
       const charge = fg.d3Force("charge") as {
-        strength?: (v: number | ((n: unknown, i: number, nodes: unknown[]) => number)) => unknown;
+        strength?: (
+          v: number | ((n: unknown, i: number, nodes: unknown[]) => number),
+        ) => unknown;
       };
       if (charge?.strength) {
         charge.strength((node: unknown) => {
           const n = node as { id?: string };
           const degree = nodeDegreesFull.get(n.id ?? "") ?? 0;
-          const base = -12;
-          const extra = -36 * (degree / maxDegreeFull);
-          return base + extra;
+          return -12 + -36 * (degree / maxDegreeFull);
         });
       }
       const link = fg.d3Force("link") as {
         distance?: (v: number) => unknown;
-        strength?: (v: number | ((l: unknown, i: number, links: unknown[]) => number)) => unknown;
+        strength?: (
+          v: number | ((l: unknown, i: number, links: unknown[]) => number),
+        ) => unknown;
       };
       if (link?.distance) link.distance(55);
       if (link?.strength) {
         link.strength((l: unknown) => {
-          const linkObj = l as { source?: { id?: string } | string; target?: { id?: string } | string; isSynthetic?: boolean };
-          if (linkObj.isSynthetic) return 0; // Synthetic links are visual only, don't affect layout
+          const linkObj = l as {
+            source?: { id?: string } | string;
+            target?: { id?: string } | string;
+            isSynthetic?: boolean;
+          };
+          if (linkObj.isSynthetic) return 0;
           const srcId =
             typeof linkObj.source === "string"
               ? linkObj.source
-              : linkObj.source?.id ?? "";
+              : (linkObj.source?.id ?? "");
           const tgtId =
             typeof linkObj.target === "string"
               ? linkObj.target
-              : linkObj.target?.id ?? "";
+              : (linkObj.target?.id ?? "");
           const d1 = nodeDegreesFull.get(srcId) ?? 0;
           const d2 = nodeDegreesFull.get(tgtId) ?? 0;
-          const avgDegree = (d1 + d2) / 2;
-          const ratio = avgDegree / maxDegreeFull;
-          return 0.5 + 0.1 * Math.pow(ratio, 1.2);
+          return 0.5 + 0.1 * Math.pow((d1 + d2) / 2 / maxDegreeFull, 1.2);
         });
       }
-      // Only reheat when transitioning from 0 to >0 nodes (initial load or restore from empty).
-      // Avoid reheat on category filter toggle to prevent sporadic graph movement.
+      // Only reheat on first load, not on category filter toggles
       if (prevNodeCountRef.current === 0 && nodeCount > 0) {
         fg.d3ReheatSimulation?.();
       }
@@ -475,16 +464,21 @@ export default function HomePage() {
     return () => clearTimeout(id);
   }, [graphDataFiltered, nodeDegreesFull, maxDegreeFull]);
 
-  // Only adjust view when selection changes, NOT when category filter changes.
-  // This prevents the graph from jumping/resetting when toggling categories.
+  // Zoom/pan to selected or highlighted nodes
   useEffect(() => {
     if (!graphRef.current || !graphDataFiltered.nodes.length) return;
     const fg = graphRef.current;
     if (highlightedNodes.length > 0) {
-      (fg as { zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void }).zoomToFit?.(
-        400,
-        50,
-        (node) => highlightedNodeIds.has((node as GraphNode).id ?? ""),
+      (
+        fg as {
+          zoomToFit?: (
+            ms?: number,
+            padding?: number,
+            nodeFilter?: (n: unknown) => boolean,
+          ) => void;
+        }
+      ).zoomToFit?.(400, 50, (node) =>
+        highlightedNodeIds.has((node as GraphNode).id ?? ""),
       );
       return;
     }
@@ -492,166 +486,80 @@ export default function HomePage() {
       const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
       const n = (node ?? selectedNode) as { x?: number; y?: number };
       if (typeof n.x === "number" && typeof n.y === "number") {
-        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(n.x, n.y, 400);
+        (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(
+          n.x,
+          n.y,
+          400,
+        );
         (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(4, 400);
       }
       return;
     }
-    // Reset to center only when user clears selection (not when filtering categories)
-    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(0, 0, 400);
+    (fg as { centerAt?: (a: number, b: number, c?: number) => void }).centerAt?.(
+      0,
+      0,
+      400,
+    );
     (fg as { zoom?: (k: number, ms?: number) => void }).zoom?.(1.0, 400);
   }, [selectedNode, highlightedNodes]);
 
   if (loading) {
     return (
-      <div className='flex flex-col items-center justify-center min-h-screen px-6'>
-        <div className='w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin' />
-        <p className='mt-4 text-gray-400'>Loading graph data...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen px-6">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-gray-400">Loading graph data...</p>
       </div>
     );
   }
 
   if (error || !graphData) {
     return (
-      <div className='flex flex-col items-center justify-center min-h-screen px-6'>
-        <p className='text-red-400 font-medium'>
-          {error ?? "Failed to load graph data"}
-        </p>
-        <p className='mt-2 text-sm text-gray-400'>
-          Ensure <code className='font-mono'>data/flavor_pairings.csv</code> or{" "}
-          <code className='font-mono'>data/nodes.csv</code> +{" "}
-          <code className='font-mono'>edges.csv</code> exist.
+      <div className="flex flex-col items-center justify-center min-h-screen px-6">
+        <p className="text-red-400 font-medium">{error ?? "Failed to load graph data"}</p>
+        <p className="mt-2 text-sm text-gray-400">
+          Ensure <code className="font-mono">data/flavor_pairings.csv</code> or{" "}
+          <code className="font-mono">data/nodes.csv</code> +{" "}
+          <code className="font-mono">data/edges.csv</code> exist.
         </p>
       </div>
     );
   }
 
   return (
-    <div className='flex flex-col h-screen w-screen overflow-hidden relative'>
+    <div className="flex flex-col h-screen w-screen overflow-hidden relative">
       {search.showGeminiKeyModal && (
         <GeminiKeyModal
           onSubmit={search.saveGeminiApiKey}
           onDismiss={search.dismissGeminiKeyModal}
         />
       )}
-      <aside
-        className={`absolute left-0 top-0 bottom-0 z-10 flex flex-col border-r border-slate-600 bg-slate-800/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
-          sidebarLeftCollapsed ? "w-10" : "w-52"
-        }`}
-      >
-        <button
-          type='button'
-          onClick={() => setSidebarLeftCollapsed((c) => !c)}
-          className='absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-r-lg border border-l-0 border-slate-600 bg-slate-800/95 shadow-sm hover:bg-slate-700 z-20'
-          aria-label={sidebarLeftCollapsed ? "Expand categories" : "Collapse categories"}
-        >
-          <span className='text-gray-400 text-xs'>
-            {sidebarLeftCollapsed ? "▶" : "◀"}
-          </span>
-        </button>
-        {!sidebarLeftCollapsed && (
-          <div className='flex-1 flex flex-col min-h-0 overflow-hidden py-4'>
-            <p className='text-xs font-semibold text-gray-300 px-3 py-2'>
-              Categories
-            </p>
-            <div className='flex gap-1 px-2 py-1.5 border-y border-slate-600'>
-              <button
-                type='button'
-                onClick={() => setHiddenCategories(new Set())}
-                className='flex-1 text-xs text-primary font-medium hover:underline'
-              >
-                Select all
-              </button>
-              <span className='text-slate-400'>|</span>
-              <button
-                type='button'
-                onClick={() => setHiddenCategories(new Set(Object.keys(CATEGORY_LABELS)))}
-                className='flex-1 text-xs text-primary font-medium hover:underline'
-              >
-                Deselect all
-              </button>
-            </div>
-            <div className='flex-1 min-h-0 overflow-y-auto py-1'>
-              {Object.entries(CATEGORY_LABELS).map(([id, label]) => {
-                const isHidden = hiddenCategories.has(id);
-                return (
-                  <label
-                    key={id}
-                    className='flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 cursor-pointer'
-                  >
-                    <input
-                      type='checkbox'
-                      checked={!isHidden}
-                      onChange={() => {
-                        setHiddenCategories((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(id)) next.delete(id);
-                          else next.add(id);
-                          return next;
-                        });
-                      }}
-                      className='rounded border-slate-500'
-                    />
-                    <span
-                      className='w-3 h-3 rounded-full shrink-0'
-                      style={{ backgroundColor: hashToColor(id) }}
-                      aria-hidden
-                    />
-                    <span className='text-xs text-gray-300 truncate'>{label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </aside>
-      {highlightedNodes.length > 0 ? (
-        <aside
-          className={`absolute top-20 z-10 w-40 max-h-[70vh] overflow-y-auto border border-slate-600 bg-slate-800/95 backdrop-blur rounded-lg shadow-xl flex flex-col gap-2 p-2 transition-[left] duration-200 ${
-            sidebarLeftCollapsed ? "left-14" : "left-56"
-          }`}
-        >
-          {highlightedNodes.map((n) => (
-            <div key={n.id} className='shrink-0'>
-              <div className='aspect-square w-full bg-slate-700 rounded overflow-hidden'>
-                {n.image ? (
-                  <img
-                    src={n.image}
-                    alt={n.name}
-                    className='w-full h-full object-cover'
-                  />
-                ) : (
-                  <div className='w-full h-full flex items-center justify-center text-gray-400 text-2xl'>
-                    —
-                  </div>
-                )}
-              </div>
-              <p className='px-2 py-1 text-xs font-medium text-gray-200 truncate' title={n.name}>
-                {n.name}
-              </p>
-            </div>
-          ))}
-        </aside>
-      ) : selectedNode?.image ? (
-        <aside
-          className={`absolute top-20 z-10 w-40 border border-slate-600 bg-slate-800/95 backdrop-blur rounded-lg shadow-xl overflow-hidden transition-[left] duration-200 ${
-            sidebarLeftCollapsed ? "left-14" : "left-56"
-          }`}
-        >
-          <div className='aspect-square w-full bg-slate-700'>
-            <img
-              src={selectedNode?.image ?? ""}
-              alt={selectedNode?.name ?? ""}
-              className='w-full h-full object-cover'
-            />
-          </div>
-          <p className='px-3 py-2 text-sm font-medium text-gray-200 truncate' title={selectedNode?.name}>
-            {selectedNode?.name}
-          </p>
-        </aside>
-      ) : null}
+
+      <CategorySidebar
+        collapsed={sidebarLeftCollapsed}
+        hiddenCategories={hiddenCategories}
+        onToggleCollapse={() => setSidebarLeftCollapsed((c) => !c)}
+        onToggleCategory={(id) => {
+          setHiddenCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        }}
+        onSelectAll={() => setHiddenCategories(new Set())}
+        onDeselectAll={() =>
+          setHiddenCategories(new Set(Object.keys(CATEGORY_LABELS)))
+        }
+      />
+
+      <NodeImageCard
+        highlightedNodes={highlightedNodes}
+        selectedNode={selectedNode}
+        sidebarCollapsed={sidebarLeftCollapsed}
+      />
+
       <a
-        href='/cookbook'
+        href="/cookbook"
         className={`absolute top-4 z-20 transition-[right] duration-200 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 ${
           sidebarRightCollapsed ? "right-[72px]" : "right-64"
         }`}
@@ -659,244 +567,103 @@ export default function HomePage() {
         <span>📖</span>
         <span>Cookbook</span>
       </a>
+
       <div
-        className={`absolute top-0 z-20 transition-[left] duration-200 ${
+        className={`absolute top-4 z-20 transition-[left] duration-200 ${
           sidebarLeftCollapsed ? "left-14" : "left-56"
         }`}
       >
         <SearchBar
-        query={search.query}
-        onQueryChange={search.setQuery}
-        focused={search.focused}
-        onFocusChange={search.setFocused}
-        results={search.fuzzyResults}
-        onSelectNode={(node) => {
-          setHighlightedNodes([]);
-          setSelectedNode(node);
-        }}
-        onSubmit={() =>
-          search.submitSearch(
-            (node) => {
-              setHighlightedNodes([]);
-              setSelectedNode(node);
-            },
-            (result) => {
-              if (result.type === "prompt") {
-                // TODO: handle LLM result when integrated
-              }
-            },
-            (nodes) => {
-              setSelectedNode(null);
-              setHighlightedNodes(nodes);
-            },
-            (source, target) => {
-              setSelectedNode(null);
-              setHighlightedNodes([source, target]);
-            },
-          )
-        }
-        isSearching={search.isSearching}
-        promptError={search.promptError}
-        useCursor={search.useCursor}
-        onUseCursorChange={search.setUseCursor}
-        geminiApiKey={search.geminiApiKey || undefined}
-        onAddGeminiKey={search.openGeminiKeyModal}
-        onRemoveGeminiKey={search.clearGeminiApiKey}
+          query={search.query}
+          onQueryChange={search.setQuery}
+          focused={search.focused}
+          onFocusChange={search.setFocused}
+          results={search.fuzzyResults}
+          onSelectNode={(node) => {
+            setHighlightedNodes([]);
+            setSelectedNode(node);
+          }}
+          onSubmit={() =>
+            search.submitSearch(
+              (node) => {
+                setHighlightedNodes([]);
+                setSelectedNode(node);
+              },
+              (result) => {
+                if (result.type === "prompt") {
+                  // TODO: handle LLM result when integrated
+                }
+              },
+              (nodes) => {
+                setSelectedNode(null);
+                setHighlightedNodes(nodes);
+              },
+              (source, target) => {
+                setSelectedNode(null);
+                setHighlightedNodes([source, target]);
+              },
+            )
+          }
+          isSearching={search.isSearching}
+          promptError={search.promptError}
+          useCursor={search.useCursor}
+          onUseCursorChange={search.setUseCursor}
+          geminiApiKey={search.geminiApiKey || undefined}
+          onAddGeminiKey={search.openGeminiKeyModal}
+          onRemoveGeminiKey={search.clearGeminiApiKey}
         />
       </div>
-      <div className='flex flex-1 min-h-0 relative'>
-        <div ref={containerRef} className='flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full'>
+
+      <div className="flex flex-1 min-h-0 relative">
+        <div
+          ref={containerRef}
+          className="flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full"
+        >
           {dimensions.width > 0 && dimensions.height > 0 && (
-          <ForceGraph2D
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ref={graphRef as any}
-            graphData={graphDataStable}
-            width={dimensions.width}
-            height={dimensions.height}
-            nodeLabel={(node) => (node as GraphNode).name}
-            nodeColor={nodeColorFn}
-            nodeVal={nodeValFn}
-            nodeRelSize={1}
-            linkVisibility={linkVisibilityFn}
-            linkColor={linkColorFn}
-            linkWidth={linkWidthFn}
-            linkLineDash={linkLineDashFn}
-            linkDirectionalParticles={0}
-            onNodeClick={handleNodeClick}
-            onBackgroundClick={clearHighlight}
-            cooldownTicks={800}
-            d3AlphaDecay={0.018}
-            d3VelocityDecay={0.7}
-          />
+            <ForceGraph2D
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ref={graphRef as any}
+              graphData={graphDataWithSyntheticLinks}
+              width={dimensions.width}
+              height={dimensions.height}
+              nodeLabel={(node) => (node as GraphNode).name}
+              nodeColor={nodeColorFn}
+              nodeVal={nodeValFn}
+              nodeRelSize={1}
+              linkVisibility={linkVisibilityFn}
+              linkColor={linkColorFn}
+              linkWidth={linkWidthFn}
+              linkLineDash={linkLineDashFn}
+              linkDirectionalParticles={0}
+              onNodeClick={handleNodeClick}
+              onBackgroundClick={clearHighlight}
+              cooldownTicks={800}
+              d3AlphaDecay={0.018}
+              d3VelocityDecay={0.7}
+            />
           )}
         </div>
-        <aside
-          className={`absolute right-0 top-0 bottom-0 z-10 flex flex-col border-l border-slate-600 bg-slate-800/95 backdrop-blur shadow-xl transition-[width] duration-200 ${
-            sidebarRightCollapsed ? "w-10" : "w-56"
-          }`}
-        >
-          <button
-            type='button'
-            onClick={() => setSidebarRightCollapsed((c) => !c)}
-            className='absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 flex items-center justify-center rounded-l-lg border border-r-0 border-slate-600 bg-slate-800/95 shadow-sm hover:bg-slate-700 z-20'
-            aria-label={sidebarRightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <span className='text-gray-400 text-xs'>
-              {sidebarRightCollapsed ? "◀" : "▶"}
-            </span>
-          </button>
-          {!sidebarRightCollapsed && (
-            <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
-              <div className='flex-1 min-h-0 overflow-y-auto px-3 py-4'>
-                {highlightedNodes.length > 0 ? (
-                  <>
-                    <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm pr-2 text-gray-100'>
-                        {highlightedNodes.map((n) => n.name).join(" + ")}
-                      </h2>
-                      <button
-                        onClick={clearHighlight}
-                        className='text-sm text-gray-400 hover:text-gray-200 shrink-0'
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <p className='text-xs text-gray-400 mb-2'>
-                      Suggested ingredients from your search
-                    </p>
-                    {hasSyntheticLinks && (
-                      <p className='text-xs text-sky-400 mb-2 flex items-center gap-1'>
-                        <span aria-hidden>—</span>
-                        Dotted blue lines indicate pairings suggested by Gemini (not in database)
-                      </p>
-                    )}
-                    <a
-                      href={`https://www.google.com/search?q=${encodeURIComponent(
-                        highlightedNodes.map((n) => n.name).join(" ") + " recipes",
-                      )}`}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='inline-flex items-center gap-1.5 text-xs text-sky-300 font-medium hover:underline'
-                    >
-                      Search popular recipes
-                      <span aria-hidden>↗</span>
-                    </a>
-                  </>
-                ) : selectedNode ? (
-                  <>
-                    <div className='flex items-center justify-between mb-3'>
-                      <h2 className='font-bold text-sm truncate pr-2 text-gray-100'>{selectedNode.name}</h2>
-                      <button
-                        onClick={() => setSelectedNode(null)}
-                        className='text-sm text-gray-400 hover:text-gray-200 shrink-0'
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <p className='text-xs text-gray-400 mb-2'>Pairs well with:</p>
-                    {pairingsByCategory.length > 0 ? (
-                      <div className='space-y-1'>
-                        {pairingsByCategory.map(({ category, label, items }) => {
-                          const isExpanded = expandedCategories.has(category);
-                          return (
-                            <div key={category} className='border-b border-slate-600 last:border-0'>
-                              <button
-                                type='button'
-                                onClick={() => {
-                                  setExpandedCategories((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(category)) next.delete(category);
-                                    else next.add(category);
-                                    return next;
-                                  });
-                                }}
-                                className='w-full flex items-center justify-between py-2 text-left hover:bg-slate-700 rounded px-1 -mx-1'
-                              >
-                                <span className='text-xs font-semibold text-gray-300 uppercase tracking-wide'>
-                                  {label}
-                                </span>
-                                <span className='text-gray-400 text-xs'>
-                                  {isExpanded ? "▼" : "▶"} {items.length}
-                                </span>
-                              </button>
-                              {isExpanded && (
-                                <ul className='space-y-1 pb-2 pl-1'>
-                                  {items.map(({ node, level }) => (
-                                    <li key={node.id}>
-                                      <button
-                                        onClick={() => {
-                                          const n = graphDataFiltered.nodes.find(
-                                            (x) => x.id === node.id,
-                                          );
-                                          if (n) setSelectedNode(n);
-                                        }}
-                                        className='text-sky-200 font-medium hover:text-sky-100 hover:underline text-left text-sm'
-                                      >
-                                        {node.name}
-                                        {level >= 3 && (
-                                          <span className='text-amber-500 ml-0.5' aria-label={level === 4 ? 'Most highly recommended' : 'Very highly recommended'}>
-                                            {level === 4 ? '★★' : '★'}
-                                          </span>
-                                        )}
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className='text-gray-400 text-xs'>No pairings in dataset</p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <label className='flex items-center gap-2 cursor-pointer mb-3'>
-                      <input
-                        type='checkbox'
-                        checked={showHolyGrailPanel}
-                        onChange={(e) => setShowHolyGrailPanel(e.target.checked)}
-                        className='rounded border-slate-500'
-                      />
-                      <span className='text-xs font-medium text-gray-300'>
-                        Holy Grail pairings
-                      </span>
-                    </label>
-                    {showHolyGrailPanel && (
-                      <>
-                        <h2 className='font-bold text-sm mb-1 text-gray-100'>Holy Grail Pairings</h2>
-                        <p className='text-xs text-gray-400 mb-3'>
-                          Most highly recommended from The Flavor Bible
-                        </p>
-                        {holyGrailPairings.length > 0 ? (
-                          <ul className='space-y-1.5'>
-                            {holyGrailPairings.map(({ source, target }) => (
-                              <li key={`${source.id}-${target.id}`}>
-                                <button
-                                  onClick={() => {
-                                    setSelectedNode(null);
-                                    setHighlightedNodes([source, target]);
-                                  }}
-                                  className='text-sky-200 font-medium hover:text-sky-100 hover:underline text-left text-sm block w-full'
-                                >
-                                  {source.name} — {target.name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className='text-gray-400 text-xs'>No holy grail pairings</p>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </aside>
+
+        <NodeDetailsSidebar
+          collapsed={sidebarRightCollapsed}
+          onToggleCollapse={() => setSidebarRightCollapsed((c) => !c)}
+          highlightedNodes={highlightedNodes}
+          hasSyntheticLinks={hasSyntheticLinks}
+          onClearHighlight={clearHighlight}
+          selectedNode={selectedNode}
+          isSelectedNodeSaved={isSelectedNodeSaved}
+          onToggleSaveNode={handleToggleSaveNode}
+          pairingsByCategory={pairingsByCategory}
+          onSelectPairing={(node) => {
+            const n = graphDataFiltered.nodes.find((x) => x.id === node.id);
+            if (n) setSelectedNode(n);
+          }}
+          holyGrailPairings={holyGrailPairings}
+          onHighlightPair={(source, target) => {
+            setSelectedNode(null);
+            setHighlightedNodes([source, target]);
+          }}
+        />
       </div>
     </div>
   );
