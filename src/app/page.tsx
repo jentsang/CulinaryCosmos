@@ -28,21 +28,56 @@ const NODE_COLORS = ["#3B82F6", "#22C55E", "#F97316", "#A855F7"];
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<
-    | { centerAt?: (x: number, y: number, ms?: number) => void; zoom?: (k: number, ms?: number) => void; zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void }
+    | {
+        centerAt?: (x: number, y: number, ms?: number) => void;
+        zoom?: (k: number, ms?: number) => void;
+        zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void;
+        d3Force?: (name: string, fn?: unknown) => unknown;
+      }
     | undefined
   >(undefined);
 
   const { graphData: rawGraphData, loading, error } = useGraphData();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
 
-  // Spread nodes by category once on initial load and immediately pin them (fx/fy)
-  // so the D3 simulation never moves them.
+  // Spread nodes, resolve overlaps in pure JS, then pin — no simulation drift.
   useEffect(() => {
     if (!rawGraphData) return;
-    const spread = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]);
-    const pinned = spread.map((n) => ({ ...n, fx: n.x, fy: n.y }));
-    setGraphData({ nodes: pinned, links: rawGraphData.links });
+    const nodes = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]) as (GraphNode & { x: number; y: number })[];
+
+    // Iterative collision resolution with a random perpendicular nudge so nodes
+    // slip sideways past each other instead of forming a uniform grid.
+    const COLLISION_R = 6;
+    const ITERS = 20;
+    for (let iter = 0; iter < ITERS; iter++) {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i];
+          const b = nodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const distSq = dx * dx + dy * dy;
+          const minDist = COLLISION_R * 2;
+          if (distSq < minDist * minDist && distSq > 0) {
+            const dist = Math.sqrt(distSq);
+            const pushAmt = (minDist - dist) * 0.02;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            // Perpendicular direction; random sign makes nodes slide organically
+            const perp = (Math.random() - 0.5) * pushAmt * 0.3;
+            a.x -= nx * pushAmt + (-ny) * perp;
+            a.y -= ny * pushAmt +   nx  * perp;
+            b.x += nx * pushAmt - (-ny) * perp;
+            b.y += ny * pushAmt -   nx  * perp;
+          }
+        }
+      }
+    }
+
+    // Pin every node so ForceGraph2D never moves them.
+    const pinned = nodes.map((n) => ({ ...n, fx: n.x, fy: n.y }));
     settledRef.current = true;
+    setGraphData({ nodes: pinned, links: rawGraphData.links });
   }, [rawGraphData]);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
