@@ -23,14 +23,28 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
+const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
+  ssr: false,
+});
+
 const NODE_COLORS = ["#3B82F6", "#22C55E", "#F97316", "#A855F7"];
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [is3D, setIs3D] = useState(true);
+
   const graphRef = useRef<
     | {
+        // 2D methods
         centerAt?: (x: number, y: number, ms?: number) => void;
         zoom?: (k: number, ms?: number) => void;
+        // 3D methods
+        cameraPosition?: (
+          position: { x?: number; y?: number; z?: number },
+          lookAt?: { x?: number; y?: number; z?: number },
+          transitionMs?: number,
+        ) => void;
+        // shared
         zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void;
         d3Force?: (name: string, fn?: unknown) => unknown;
       }
@@ -40,13 +54,12 @@ export default function HomePage() {
   const { graphData: rawGraphData, loading, error } = useGraphData();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
 
-  // Spread nodes, resolve overlaps in pure JS, then pin — no simulation drift.
+  // Spread nodes in 3D, resolve overlaps, then pin — no simulation drift.
   useEffect(() => {
     if (!rawGraphData) return;
-    const nodes = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]) as (GraphNode & { x: number; y: number })[];
+    const nodes = spreadNodesByCategory(rawGraphData.nodes as GraphNode[]) as (GraphNode & { x: number; y: number; z: number })[];
 
-    // Iterative collision resolution with a random perpendicular nudge so nodes
-    // slip sideways past each other instead of forming a uniform grid.
+    // Iterative 3D collision resolution.
     const COLLISION_R = 6;
     const ITERS = 20;
     for (let iter = 0; iter < ITERS; iter++) {
@@ -56,26 +69,28 @@ export default function HomePage() {
           const b = nodes[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const distSq = dx * dx + dy * dy;
+          const dz = b.z - a.z;
+          const distSq = dx * dx + dy * dy + dz * dz;
           const minDist = COLLISION_R * 2;
           if (distSq < minDist * minDist && distSq > 0) {
             const dist = Math.sqrt(distSq);
             const pushAmt = (minDist - dist) * 0.02;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Perpendicular direction; random sign makes nodes slide organically
-            const perp = (Math.random() - 0.5) * pushAmt * 0.3;
-            a.x -= nx * pushAmt + (-ny) * perp;
-            a.y -= ny * pushAmt +   nx  * perp;
-            b.x += nx * pushAmt - (-ny) * perp;
-            b.y += ny * pushAmt -   nx  * perp;
+            const nz = dz / dist;
+            a.x -= nx * pushAmt;
+            a.y -= ny * pushAmt;
+            a.z -= nz * pushAmt;
+            b.x += nx * pushAmt;
+            b.y += ny * pushAmt;
+            b.z += nz * pushAmt;
           }
         }
       }
     }
 
-    // Pin every node so ForceGraph2D never moves them.
-    const pinned = nodes.map((n) => ({ ...n, fx: n.x, fy: n.y }));
+    // Pin every node so ForceGraph3D never moves them.
+    const pinned = nodes.map((n) => ({ ...n, fx: n.x, fy: n.y, fz: n.z }));
     settledRef.current = true;
     setGraphData({ nodes: pinned, links: rawGraphData.links });
   }, [rawGraphData]);
@@ -257,7 +272,7 @@ export default function HomePage() {
   }, [graphData]);
 
   const handleNodeClick = useCallback(
-    (node: { id?: string | number; name?: string; x?: number; y?: number } | null) => {
+    (node: { id?: string | number; name?: string; x?: number; y?: number; z?: number } | null) => {
       if (!node || !graphDataFiltered.nodes.length) {
         clearHighlight();
         return;
@@ -392,6 +407,7 @@ export default function HomePage() {
     [selectedNode, highlightedNodes.length, highlightedNodeIds],
   );
 
+
   const linkLineDashFn = useCallback(
     (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
       if ((link as { isSynthetic?: boolean }).isSynthetic) return [4, 4];
@@ -433,25 +449,35 @@ export default function HomePage() {
     graphDataForDisplay.links.length > (graphData?.links.length ?? 0);
 
 
-  // Zoom/pan to selected or highlighted nodes
+  // Camera/viewport navigation to selected or highlighted nodes
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg || !graphDataFiltered.nodes.length) return;
     if (highlightedNodes.length > 0) {
-      fg.zoomToFit?.(400, 50, (node) =>
+      fg.zoomToFit?.(400, 80, (node) =>
         highlightedNodeIds.has((node as GraphNode).id ?? ""),
       );
       return;
     }
     if (selectedNode) {
       const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
-      const n = (node ?? selectedNode) as { x?: number; y?: number };
-      if (typeof n.x === "number" && typeof n.y === "number") {
-        fg.centerAt?.(n.x, n.y, 400);
-        fg.zoom?.(4, 400);
+      const n = (node ?? selectedNode) as { x?: number; y?: number; z?: number };
+      if (is3D) {
+        if (typeof n.x === "number" && typeof n.y === "number" && typeof n.z === "number") {
+          fg.cameraPosition?.(
+            { x: n.x, y: n.y, z: n.z + 80 },
+            { x: n.x, y: n.y, z: n.z },
+            400,
+          );
+        }
+      } else {
+        if (typeof n.x === "number" && typeof n.y === "number") {
+          fg.centerAt?.(n.x, n.y, 400);
+          fg.zoom?.(4, 400);
+        }
       }
     }
-  }, [selectedNode, highlightedNodes]);
+  }, [selectedNode, highlightedNodes, is3D]);
 
   if (loading) {
     return (
@@ -508,15 +534,28 @@ export default function HomePage() {
         sidebarCollapsed={sidebarLeftCollapsed}
       />
 
-      <a
-        href="/cookbook"
-        className={`absolute top-4 z-20 transition-[right] duration-200 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 ${
+      <div
+        className={`absolute top-4 z-20 flex items-center gap-2 transition-[right] duration-200 ${
           sidebarRightCollapsed ? "right-[72px]" : "right-64"
         }`}
       >
-        <span>📖</span>
-        <span>Cookbook</span>
-      </a>
+        <button
+          onClick={() => setIs3D((v) => !v)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 transition-colors"
+          title={is3D ? "Switch to 2D view" : "Switch to 3D view"}
+        >
+          <span>{is3D ? "2D" : "3D"}</span>
+          <span className="text-xs text-gray-400">{is3D ? "flat" : "space"}</span>
+        </button>
+
+        <a
+          href="/cookbook"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700"
+        >
+          <span>📖</span>
+          <span>Cookbook</span>
+        </a>
+      </div>
 
       <div
         className={`absolute top-4 z-20 transition-[left] duration-200 ${
@@ -570,26 +609,49 @@ export default function HomePage() {
           className="flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full"
         >
           {dimensions.width > 0 && dimensions.height > 0 && (
-            <ForceGraph2D
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ref={graphRef as any}
-              graphData={graphDataForDisplay}
-              nodeVisibility={nodeVisibilityFn}
-              width={dimensions.width}
-              height={dimensions.height}
-              nodeLabel={(node) => (node as GraphNode).name}
-              nodeColor={nodeColorFn}
-              nodeVal={nodeValFn}
-              nodeRelSize={1}
-              linkVisibility={linkVisibilityFn}
-              linkColor={linkColorFn}
-              linkWidth={linkWidthFn}
-              linkLineDash={linkLineDashFn}
-              linkDirectionalParticles={0}
-              onNodeClick={handleNodeClick}
-              onBackgroundClick={clearHighlight}
-              cooldownTicks={0}
-            />
+            is3D ? (
+              <ForceGraph3D
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ref={graphRef as any}
+                graphData={graphDataForDisplay}
+                nodeVisibility={nodeVisibilityFn}
+                width={dimensions.width}
+                height={dimensions.height}
+                nodeLabel={(node) => (node as GraphNode).name}
+                nodeColor={nodeColorFn}
+                nodeVal={nodeValFn}
+                nodeRelSize={1}
+                linkVisibility={linkVisibilityFn}
+                linkColor={linkColorFn}
+                linkWidth={linkWidthFn}
+                linkDirectionalParticles={0}
+                onNodeClick={handleNodeClick}
+                onBackgroundClick={clearHighlight}
+                cooldownTicks={0}
+                backgroundColor="#0f172a"
+              />
+            ) : (
+              <ForceGraph2D
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ref={graphRef as any}
+                graphData={graphDataForDisplay}
+                nodeVisibility={nodeVisibilityFn}
+                width={dimensions.width}
+                height={dimensions.height}
+                nodeLabel={(node) => (node as GraphNode).name}
+                nodeColor={nodeColorFn}
+                nodeVal={nodeValFn}
+                nodeRelSize={1}
+                linkVisibility={linkVisibilityFn}
+                linkColor={linkColorFn}
+                linkWidth={linkWidthFn}
+                linkLineDash={linkLineDashFn}
+                linkDirectionalParticles={0}
+                onNodeClick={handleNodeClick}
+                onBackgroundClick={clearHighlight}
+                cooldownTicks={0}
+              />
+            )
           )}
         </div>
 

@@ -127,12 +127,13 @@ const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 /** Radius of the ring that category cluster centers are placed on. */
 const LAYOUT_RADIUS = 280;
 
-/** Get (x, y) center for a category by its index (0..numCategories-1). */
-export function getCategoryCenter(categoryIndex: number, numCategories: number): { x: number; y: number } {
+/** Get (x, y, z) center for a category by its index (0..numCategories-1). */
+export function getCategoryCenter(categoryIndex: number, numCategories: number): { x: number; y: number; z: number } {
   const angle = (2 * Math.PI * categoryIndex) / numCategories - Math.PI / 2;
   return {
     x: LAYOUT_RADIUS * Math.cos(angle),
     y: LAYOUT_RADIUS * Math.sin(angle),
+    z: 0,
   };
 }
 
@@ -144,7 +145,7 @@ export function getCategoryIndex(category: string | undefined): number {
 
 export function spreadNodes(
   nodes: GraphNode[],
-): (GraphNode & { x: number; y: number })[] {
+): (GraphNode & { x: number; y: number; z: number })[] {
   const n = nodes.length;
   const cols = Math.ceil(Math.sqrt(n));
   const spacing = 70;
@@ -160,6 +161,7 @@ export function spreadNodes(
       Math.floor(i / cols) * spacing -
       offset +
       (Math.random() - 0.5) * jitter,
+    z: (Math.random() - 0.5) * jitter,
   }));
 }
 
@@ -182,13 +184,13 @@ function seededGaussian(seed1: string, seed2: string): number {
 }
 
 /**
- * Spread nodes by category so each category forms an organic disc-shaped cluster.
- * Categories are arranged in a circular layout; nodes within each category are
- * scattered at random angles and radii so the cluster looks natural, not grid-like.
+ * Spread nodes by category in 3D so each category forms an organic blob-shaped cluster.
+ * Categories are arranged on a sphere shell; nodes within each category are scattered
+ * with Gaussian noise in all three axes so clusters look natural and volumetric.
  */
 export function spreadNodesByCategory(
   nodes: GraphNode[],
-): (GraphNode & { x: number; y: number })[] {
+): (GraphNode & { x: number; y: number; z: number })[] {
   const categoryToNodes = new Map<string, GraphNode[]>();
   for (const node of nodes) {
     const cat = node.category ?? "other";
@@ -203,26 +205,35 @@ export function spreadNodesByCategory(
     categoryToIndex.set(cat, nextIdx++);
   }
 
-  const result: (GraphNode & { x: number; y: number })[] = [];
+  const result: (GraphNode & { x: number; y: number; z: number })[] = [];
 
   for (const [cat, nodesInCat] of categoryToNodes) {
     const catIdx = categoryToIndex.get(cat) ?? categoryToIndex.get("other") ?? 0;
-    const catAngle = (2 * Math.PI * catIdx) / numCategories - Math.PI / 2;
-    // Randomise each category's distance from origin (0.7–1.0× LAYOUT_RADIUS)
-    // so the ring of cluster centres is irregular but categories stay separated.
+    // Fibonacci-sphere distribution: spread cluster centres evenly over a sphere shell.
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const t = numCategories > 1 ? catIdx / (numCategories - 1) : 0.5;
+    const phi = Math.acos(1 - 2 * t);
+    const theta = goldenAngle * catIdx;
     const catR = LAYOUT_RADIUS * (0.5 + 0.3 * seededRandom("cr" + cat));
-    const cx = catR * Math.cos(catAngle);
-    const cy = catR * Math.sin(catAngle);
+    const cx = catR * Math.sin(phi) * Math.cos(theta);
+    const cy = catR * Math.sin(phi) * Math.sin(theta);
+    const cz = catR * Math.cos(phi);
 
-    // Each category gets independent σ for x and y — no two clusters look alike
+    // Independent σ per axis so clusters have different shapes
     const sigmaX = (3 + 4 * seededRandom("sx" + cat)) * Math.sqrt(nodesInCat.length);
     const sigmaY = (3 + 4 * seededRandom("sy" + cat)) * Math.sqrt(nodesInCat.length);
+    const sigmaZ = (3 + 4 * seededRandom("sz" + cat)) * Math.sqrt(nodesInCat.length);
 
     for (const node of nodesInCat) {
-      // Two independent Gaussian samples (different seed pairs for x and y)
       const gx = seededGaussian("ax" + node.id, "bx" + node.id);
       const gy = seededGaussian("ay" + node.id, "by" + node.id);
-      result.push({ ...node, x: cx + gx * sigmaX, y: cy + gy * sigmaY });
+      const gz = seededGaussian("az" + node.id, "bz" + node.id);
+      result.push({
+        ...node,
+        x: cx + gx * sigmaX,
+        y: cy + gy * sigmaY,
+        z: cz + gz * sigmaZ,
+      });
     }
   }
   return result;
