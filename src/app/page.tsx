@@ -19,6 +19,10 @@ import { CategorySidebar } from "./_components/CategorySidebar";
 import { NodeDetailsSidebar } from "./_components/NodeDetailsSidebar";
 import { NodeImageCard } from "./_components/NodeImageCard";
 
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
+  ssr: false,
+});
+
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
   ssr: false,
 });
@@ -27,13 +31,20 @@ const NODE_COLORS = ["#3B82F6", "#22C55E", "#F97316", "#A855F7"];
 
 export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [is3D, setIs3D] = useState(true);
+
   const graphRef = useRef<
     | {
+        // 2D methods
+        centerAt?: (x: number, y: number, ms?: number) => void;
+        zoom?: (k: number, ms?: number) => void;
+        // 3D methods
         cameraPosition?: (
           position: { x?: number; y?: number; z?: number },
           lookAt?: { x?: number; y?: number; z?: number },
           transitionMs?: number,
         ) => void;
+        // shared
         zoomToFit?: (ms?: number, padding?: number, nodeFilter?: (n: unknown) => boolean) => void;
         d3Force?: (name: string, fn?: unknown) => unknown;
       }
@@ -397,6 +408,14 @@ export default function HomePage() {
   );
 
 
+  const linkLineDashFn = useCallback(
+    (link: { source?: unknown; target?: unknown } & Record<string, unknown>) => {
+      if ((link as { isSynthetic?: boolean }).isSynthetic) return [4, 4];
+      return null;
+    },
+    [],
+  );
+
   // nodeVisibility: hide nodes whose category is toggled off.
   // This replaces filtering graphData (which would restart the simulation).
   const nodeVisibilityFn = useCallback(
@@ -430,7 +449,7 @@ export default function HomePage() {
     graphDataForDisplay.links.length > (graphData?.links.length ?? 0);
 
 
-  // Camera navigation to selected or highlighted nodes
+  // Camera/viewport navigation to selected or highlighted nodes
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg || !graphDataFiltered.nodes.length) return;
@@ -443,16 +462,22 @@ export default function HomePage() {
     if (selectedNode) {
       const node = graphDataFiltered.nodes.find((n) => n.id === selectedNode.id);
       const n = (node ?? selectedNode) as { x?: number; y?: number; z?: number };
-      if (typeof n.x === "number" && typeof n.y === "number" && typeof n.z === "number") {
-        // Pull camera 80 units back from the node along the current viewing axis
-        fg.cameraPosition?.(
-          { x: n.x, y: n.y, z: n.z + 80 },
-          { x: n.x, y: n.y, z: n.z },
-          400,
-        );
+      if (is3D) {
+        if (typeof n.x === "number" && typeof n.y === "number" && typeof n.z === "number") {
+          fg.cameraPosition?.(
+            { x: n.x, y: n.y, z: n.z + 80 },
+            { x: n.x, y: n.y, z: n.z },
+            400,
+          );
+        }
+      } else {
+        if (typeof n.x === "number" && typeof n.y === "number") {
+          fg.centerAt?.(n.x, n.y, 400);
+          fg.zoom?.(4, 400);
+        }
       }
     }
-  }, [selectedNode, highlightedNodes]);
+  }, [selectedNode, highlightedNodes, is3D]);
 
   if (loading) {
     return (
@@ -509,15 +534,28 @@ export default function HomePage() {
         sidebarCollapsed={sidebarLeftCollapsed}
       />
 
-      <a
-        href="/cookbook"
-        className={`absolute top-4 z-20 transition-[right] duration-200 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 ${
+      <div
+        className={`absolute top-4 z-20 flex items-center gap-2 transition-[right] duration-200 ${
           sidebarRightCollapsed ? "right-[72px]" : "right-64"
         }`}
       >
-        <span>📖</span>
-        <span>Cookbook</span>
-      </a>
+        <button
+          onClick={() => setIs3D((v) => !v)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700 transition-colors"
+          title={is3D ? "Switch to 2D view" : "Switch to 3D view"}
+        >
+          <span>{is3D ? "2D" : "3D"}</span>
+          <span className="text-xs text-gray-400">{is3D ? "flat" : "space"}</span>
+        </button>
+
+        <a
+          href="/cookbook"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-200 bg-slate-800/95 border border-slate-600 backdrop-blur shadow-sm hover:bg-slate-700"
+        >
+          <span>📖</span>
+          <span>Cookbook</span>
+        </a>
+      </div>
 
       <div
         className={`absolute top-4 z-20 transition-[left] duration-200 ${
@@ -571,26 +609,49 @@ export default function HomePage() {
           className="flex-1 min-w-0 min-h-0 bg-slate-900 relative w-full h-full"
         >
           {dimensions.width > 0 && dimensions.height > 0 && (
-            <ForceGraph3D
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ref={graphRef as any}
-              graphData={graphDataForDisplay}
-              nodeVisibility={nodeVisibilityFn}
-              width={dimensions.width}
-              height={dimensions.height}
-              nodeLabel={(node) => (node as GraphNode).name}
-              nodeColor={nodeColorFn}
-              nodeVal={nodeValFn}
-              nodeRelSize={1}
-              linkVisibility={linkVisibilityFn}
-              linkColor={linkColorFn}
-              linkWidth={linkWidthFn}
-              linkDirectionalParticles={0}
-              onNodeClick={handleNodeClick}
-              onBackgroundClick={clearHighlight}
-              cooldownTicks={0}
-              backgroundColor="#0f172a"
-            />
+            is3D ? (
+              <ForceGraph3D
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ref={graphRef as any}
+                graphData={graphDataForDisplay}
+                nodeVisibility={nodeVisibilityFn}
+                width={dimensions.width}
+                height={dimensions.height}
+                nodeLabel={(node) => (node as GraphNode).name}
+                nodeColor={nodeColorFn}
+                nodeVal={nodeValFn}
+                nodeRelSize={1}
+                linkVisibility={linkVisibilityFn}
+                linkColor={linkColorFn}
+                linkWidth={linkWidthFn}
+                linkDirectionalParticles={0}
+                onNodeClick={handleNodeClick}
+                onBackgroundClick={clearHighlight}
+                cooldownTicks={0}
+                backgroundColor="#0f172a"
+              />
+            ) : (
+              <ForceGraph2D
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ref={graphRef as any}
+                graphData={graphDataForDisplay}
+                nodeVisibility={nodeVisibilityFn}
+                width={dimensions.width}
+                height={dimensions.height}
+                nodeLabel={(node) => (node as GraphNode).name}
+                nodeColor={nodeColorFn}
+                nodeVal={nodeValFn}
+                nodeRelSize={1}
+                linkVisibility={linkVisibilityFn}
+                linkColor={linkColorFn}
+                linkWidth={linkWidthFn}
+                linkLineDash={linkLineDashFn}
+                linkDirectionalParticles={0}
+                onNodeClick={handleNodeClick}
+                onBackgroundClick={clearHighlight}
+                cooldownTicks={0}
+              />
+            )
           )}
         </div>
 
